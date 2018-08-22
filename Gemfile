@@ -1,1 +1,3 @@
+gem 'rubyserial'
+
 gem 'rspec'
