@@ -91,6 +91,20 @@ describe Rplidar do
     end
   end
 
+  describe '#parse_response_descriptor' do
+    subject { lidar.parse_response_descriptor("\xA5Z\x03\x00\x00\x00\x06".force_encoding('ASCII-8BIT')) }
+
+    it 'returns hash with parsed values' do
+      expect(subject).to eq({ data_response_length: 3, send_mode: 0, data_type: 6 })
+    end
+  end
+
+  describe '#binary_to_ints' do
+    it 'converts binary sequence to integer array' do
+      expect(lidar.binary_to_ints("\xA5Z\x03\x00\x00\x00\x06".force_encoding('ASCII-8BIT'))).to eq([165, 90, 3, 0, 0, 0, 6])
+    end
+  end
+
   describe '#ints_to_binary' do
     it 'converts array of integers to binary sequence' do
       expect(lidar.ints_to_binary([ 97 ])).to eq("a")

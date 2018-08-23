@@ -13,7 +13,8 @@ class Rplidar
 
   def get_health
     request(COMMAND_GET_HEALTH)
-    response = port.read(7)
+    descriptor = parse_response_descriptor(port.read(7))
+    data_response = parse_data_response(port.read(descriptor[:data_response_length]))
   end
 
   def scan
@@ -22,6 +23,10 @@ class Rplidar
 
   def stop
     request(COMMAND_STOP)
+  end
+
+  def port
+    @port ||= Serial.new(@port_address, UART_BAUD_RATE, 8, :none, 1)
   end
 
   def close
@@ -33,13 +38,35 @@ class Rplidar
   def request(command)
     params = [ 0xA5, command ]
     port.write(ints_to_binary(params))
+    sleep 0.002
   end
 
-  def port
-    @port ||= Serial.new(@port_address, UART_BAUD_RATE, 8, :none, 1)
+  # Format of Response Descriptor:
+  #
+  # Start Flag 1   Start Flag 2    Data Response Length  Send Mode  Data Type
+  #
+  # 1 byte (0xA5)  1 bytes (0x5A)  30 bits               2 bits     1 byte
+  def parse_response_descriptor(string)
+    response = binary_to_ints(string)
+
+    # TODO: check response headers
+
+    {
+      data_response_length: (response[5]>>2) + (response[4]<<16) + (response[3]<<8) + response[2],
+      send_mode: response[5] & 0b11,
+      data_type: response[6]
+    }
+  end
+
+  def parse_data_response(string)
+    binary_to_ints(string)
   end
 
   def ints_to_binary(array)
     array.pack('C*')
+  end
+
+  def binary_to_ints(string)
+    string.unpack('C*')
   end
 end
