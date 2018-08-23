@@ -1,4 +1,12 @@
+GIT
+  remote: git://github.com/hybridgroup/rubyserial.git
+  revision: adeb47432e0dfa284e20707bb379daf6c4daf8ae
+  specs:
+    rubyserial (0.5.0)
+      ffi (~> 1.9, >= 1.9.3)
+
 GEM
+  remote: https://rubygems.org/
   specs:
     codecov (0.1.10)
       json
@@ -21,8 +29,6 @@ GEM
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.7.0)
     rspec-support (3.7.1)
-    rubyserial (0.5.0)
-      ffi (~> 1.9, >= 1.9.3)
     simplecov (0.16.1)
       docile (~> 1.1)
       json (>= 1.8, < 3)
@@ -36,7 +42,7 @@ PLATFORMS
 DEPENDENCIES
   codecov
   rspec
-  rubyserial
+  rubyserial!
 
 BUNDLED WITH
    1.16.2

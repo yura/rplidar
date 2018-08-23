@@ -1,6 +1,7 @@
 require 'rubyserial'
 
 class Rplidar
+  COMMAND_GET_HEALTH = 0x52
   COMMAND_SCAN = 0x20
   COMMAND_STOP = 0x25
 
@@ -8,6 +9,11 @@ class Rplidar
 
   def initialize(port_address)
     @port_address = port_address
+  end
+
+  def get_health
+    request(COMMAND_GET_HEALTH)
+    response = port.read(7)
   end
 
   def scan
@@ -30,10 +36,10 @@ class Rplidar
   end
 
   def port
-    @port ||= Serial.new(@port_address, UART_BAUD_RATE)
+    @port ||= Serial.new(@port_address, UART_BAUD_RATE, 8, :none, 1)
   end
 
   def ints_to_binary(array)
-    array.pack('v*')
+    array.pack('C*')
   end
 end

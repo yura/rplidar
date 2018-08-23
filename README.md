@@ -2,11 +2,15 @@
 
 ## Usage
 
+Run `bundle exec irb`
+
 ```ruby
-require 'rplidar'
+require './lib/rplidar'
 
 # for Mac OS
 lidar = Rplidar.new('/dev/tty.SLAB_USBtoUART')
+lidar.get_health
+
 lidar.scan
 ...
 lidar.stop
