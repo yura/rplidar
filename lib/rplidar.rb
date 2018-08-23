@@ -1,3 +1,5 @@
+require 'rubyserial'
+
 class Rplidar
   COMMAND_SCAN = 0x20
   COMMAND_STOP = 0x25
@@ -14,6 +16,12 @@ class Rplidar
 
   def stop
     request(COMMAND_STOP)
+  end
+
+  def close
+    if @port
+      @port.close
+    end
   end
 
   def request(command)

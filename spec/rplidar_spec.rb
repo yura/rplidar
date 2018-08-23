@@ -34,6 +34,24 @@ describe Rplidar do
     end
   end
 
+  describe '#close' do
+    subject { lidar.close }
+    let(:port) { double('serial port') }
+
+    it 'does not close the port if it is not open' do
+      expect(port).to_not receive(:close)
+      subject
+    end
+
+    it 'closes the port if it is exist' do
+      allow(Serial).to receive(:new).with('/serial', 115200).and_return(port)
+      lidar.port
+
+      expect(port).to receive(:close).and_return(true)
+      subject
+    end
+  end
+
   describe '#port' do
     subject { lidar.port }
     let(:port) { double('serial port') }
