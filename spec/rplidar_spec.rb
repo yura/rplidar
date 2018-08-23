@@ -8,13 +8,22 @@ describe Rplidar do
     subject { lidar.scan }
 
     it 'sends scan request' do
-      expect(lidar).to receive(:request).with([0xA5, 0x20])
+      expect(lidar).to receive(:request).with(0x20)
+      subject
+    end
+  end
+
+  describe '#stop' do
+    subject { lidar.stop }
+
+    it 'sends stop request' do
+      expect(lidar).to receive(:request).with(0x25)
       subject
     end
   end
 
   describe '#request' do
-    subject { lidar.request([ 0xA5, 0x20 ]) }
+    subject { lidar.request(0x20) }
     let(:port) { double('serial port') }
 
     it 'write binary string to the serial port' do
