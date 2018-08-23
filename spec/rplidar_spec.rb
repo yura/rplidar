@@ -1,8 +1,9 @@
 require 'spec_helper'
 require 'rplidar'
+require 'rubyserial'
 
 describe Rplidar do
-  let(:lidar) { Rplidar.new }
+  let(:lidar) { Rplidar.new('/serial') }
 
   describe '#scan' do
     subject { lidar.scan }
@@ -34,6 +35,26 @@ describe Rplidar do
   end
 
   describe '#port' do
+    subject { lidar.port }
+    let(:port) { double('serial port') }
+
+    before do
+      allow(Serial).to receive(:new).with('/serial', 115200).and_return(port)
+    end
+
+    it 'opens serial port' do
+      expect(Serial).to receive(:new).with('/serial', 115200).and_return(port)
+      subject
+    end
+
+    it 'does not open port if it is already open' do
+      # call it first time
+      lidar.port
+
+      expect(Serial).to_not receive(:new).with('/serial', 115200)
+      # call it second time
+      subject
+    end
   end
 
   describe '#ints_to_binary' do
