@@ -65,6 +65,15 @@ describe Rplidar do
     end
   end
 
+  describe '#reset' do
+    subject { lidar.reset }
+
+    it 'sends STOP request' do
+      expect(lidar).to receive(:request).with(0x40)
+      subject
+    end
+  end
+
   describe '#request' do
     subject { lidar.request(0x20) }
 

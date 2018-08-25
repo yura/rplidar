@@ -1,10 +1,11 @@
 require 'rubyserial'
 
 class Rplidar
-  COMMAND_GET_HEALTH = 0x52
-  COMMAND_START_MOTOR = 0xF0
-  COMMAND_SCAN = 0x20
-  COMMAND_STOP = 0x25
+  COMMAND_GET_HEALTH  = 0x52
+  COMMAND_MOTOR_PWM   = 0xF0
+  COMMAND_SCAN        = 0x20
+  COMMAND_STOP        = 0x25
+  COMMAND_RESET       = 0x40
 
   UART_BAUD_RATE = 115200
 
@@ -19,11 +20,11 @@ class Rplidar
   end
 
   def start_motor
-    request_with_payload(COMMAND_START_MOTOR, 660)
+    request_with_payload(COMMAND_MOTOR_PWM, 660)
   end
 
   def stop_motor
-    request_with_payload(COMMAND_START_MOTOR, 0)
+    request_with_payload(COMMAND_MOTOR_PWM, 0)
   end
 
   def scan
@@ -32,6 +33,10 @@ class Rplidar
 
   def stop
     request(COMMAND_STOP)
+  end
+
+  def reset
+    request(COMMAND_RESET)
   end
 
   def port
