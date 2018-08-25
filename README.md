@@ -11,9 +11,10 @@ require './lib/rplidar'
 lidar = Rplidar.new('/dev/tty.SLAB_USBtoUART')
 lidar.get_health
 
+lidar.start_motor
 lidar.scan
 ...
 lidar.stop
+lidar.stop_motor
 lidar.close
 ```
-

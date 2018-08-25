@@ -29,6 +29,24 @@ describe Rplidar do
     end
   end
 
+  describe '#start_motor' do
+    subject { lidar.start_motor }
+
+    it 'sends START_MOTOR command' do
+      expect(lidar).to receive(:request_with_payload).with(0xF0, 660)
+      subject
+    end
+  end
+
+  describe '#stop_motor' do
+    subject { lidar.stop_motor }
+
+    it 'sends STOP_MOTOR command' do
+      expect(lidar).to receive(:request_with_payload).with(0xF0, 0)
+      subject
+    end
+  end
+
   describe '#scan' do
     subject { lidar.scan }
 
@@ -50,10 +68,26 @@ describe Rplidar do
   describe '#request' do
     subject { lidar.request(0x20) }
 
-    it 'write binary string to the serial port' do
+    it 'writes binary string to the serial port' do
       expect(lidar).to receive(:port).and_return(port)
       expect(port).to receive(:write).with("\xA5 ".force_encoding('ASCII-8BIT'))
       subject
+    end
+  end
+
+  describe '#request_with_payload' do
+    subject { lidar.request_with_payload(0xF0, 660) }
+
+    it 'writes binary string with payload to the serial port' do
+      expect(port).to receive(:write).with("\xA5\xF0\x02\x94\x02\xC1".force_encoding('ASCII-8BIT'))
+      subject
+    end
+  end
+
+  describe '#checksum' do
+    it 'XORs bytes' do
+      expect(lidar.checksum('a')).to eq(97)
+      expect(lidar.checksum("\xA5\xF0")).to eq(0xA5 ^ 0xF0)
     end
   end
 
@@ -107,6 +141,7 @@ describe Rplidar do
 
   describe '#ints_to_binary' do
     it 'converts array of integers to binary sequence' do
+      expect(lidar.ints_to_binary(97)).to eq("a")
       expect(lidar.ints_to_binary([ 97 ])).to eq("a")
       expect(lidar.ints_to_binary([ 0xA5, 0x20 ])).to eq("\xA5 ".force_encoding('ASCII-8BIT'))
     end

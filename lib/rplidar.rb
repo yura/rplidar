@@ -2,6 +2,7 @@ require 'rubyserial'
 
 class Rplidar
   COMMAND_GET_HEALTH = 0x52
+  COMMAND_START_MOTOR = 0xF0
   COMMAND_SCAN = 0x20
   COMMAND_STOP = 0x25
 
@@ -15,6 +16,14 @@ class Rplidar
     request(COMMAND_GET_HEALTH)
     descriptor = parse_response_descriptor(port.read(7))
     data_response = parse_data_response(port.read(descriptor[:data_response_length]))
+  end
+
+  def start_motor
+    request_with_payload(COMMAND_START_MOTOR, 660)
+  end
+
+  def stop_motor
+    request_with_payload(COMMAND_START_MOTOR, 0)
   end
 
   def scan
@@ -41,6 +50,23 @@ class Rplidar
     sleep 0.002
   end
 
+  def request_with_payload(command, payload)
+    payload_string = ints_to_binary(payload, 'S<*')
+    payload_size =  payload_string.size
+
+    string = ints_to_binary([ 0xA5, command, payload_size ])
+    string += payload_string
+    string += ints_to_binary(checksum(string))
+
+    port.write(string)
+  end
+
+  def checksum(string)
+    result = 0
+    binary_to_ints(string).each { |c| result ^= c }
+    result
+  end
+
   # Format of Response Descriptor:
   #
   # Start Flag 1   Start Flag 2    Data Response Length  Send Mode  Data Type
@@ -62,11 +88,11 @@ class Rplidar
     binary_to_ints(string)
   end
 
-  def ints_to_binary(array)
-    array.pack('C*')
+  def ints_to_binary(array, format = 'C*')
+    [ array ].flatten.pack(format)
   end
 
-  def binary_to_ints(string)
-    string.unpack('C*')
+  def binary_to_ints(string, format = 'C*')
+    string.unpack(format)
   end
 end
