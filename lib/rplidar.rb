@@ -33,16 +33,17 @@ class Rplidar
     request(COMMAND_SCAN)
     response = port.read(RESPONSE_DESCRIPTOR_SIZE)
     descriptor = parse_response_descriptor(response)
-    i = 0
-    File.open('output.bin', 'w') do |file|
-      loop do
-        break if i >= iterations
-        file.puts binary_to_ints(port.read(descriptor[:data_response_length])).inspect
-        i += 1
-      end
-    end
-    stop
-    stop_motor
+
+    #i = 0
+    #File.open('output.bin', 'w') do |file|
+    #  loop do
+    #    break if i >= iterations
+    #    file.puts binary_to_ints(port.read(descriptor[:data_response_length])).inspect
+    #    i += 1
+    #  end
+    #end
+    #stop
+    #stop_motor
   end
 
   def stop
