@@ -7,7 +7,9 @@ class Rplidar
   COMMAND_STOP        = 0x25
   COMMAND_RESET       = 0x40
 
-  UART_BAUD_RATE = 115200
+  UART_BAUD_RATE = 115_200
+
+  RESPONSE_DESCRIPTOR_SIZE = 7
 
   def initialize(port_address)
     @port_address = port_address
@@ -15,7 +17,7 @@ class Rplidar
 
   def get_health
     request(COMMAND_GET_HEALTH)
-    descriptor = parse_response_descriptor(port.read(7))
+    descriptor = parse_response_descriptor(port.read(RESPONSE_DESCRIPTOR_SIZE))
     data_response = parse_data_response(port.read(descriptor[:data_response_length]))
   end
 
@@ -27,8 +29,20 @@ class Rplidar
     request_with_payload(COMMAND_MOTOR_PWM, 0)
   end
 
-  def scan
+  def scan(iterations = 10)
     request(COMMAND_SCAN)
+    response = port.read(RESPONSE_DESCRIPTOR_SIZE)
+    descriptor = parse_response_descriptor(response)
+    i = 0
+    File.open('output.bin', 'w') do |file|
+      loop do
+        break if i >= iterations
+        file.puts binary_to_ints(port.read(descriptor[:data_response_length])).inspect
+        i += 1
+      end
+    end
+    stop
+    stop_motor
   end
 
   def stop
@@ -44,22 +58,20 @@ class Rplidar
   end
 
   def close
-    if @port
-      @port.close
-    end
+    @port.close if @port
   end
 
   def request(command)
-    params = [ 0xA5, command ]
+    params = [0xA5, command]
     port.write(ints_to_binary(params))
     sleep 0.002
   end
 
   def request_with_payload(command, payload)
     payload_string = ints_to_binary(payload, 'S<*')
-    payload_size =  payload_string.size
+    payload_size = payload_string.size
 
-    string = ints_to_binary([ 0xA5, command, payload_size ])
+    string = ints_to_binary([0xA5, command, payload_size])
     string += payload_string
     string += ints_to_binary(checksum(string))
 
@@ -83,8 +95,8 @@ class Rplidar
     # TODO: check response headers
 
     {
-      data_response_length: (response[5]>>2) + (response[4]<<16) + (response[3]<<8) + response[2],
-      send_mode: response[5] & 0b11,
+      data_response_length: (response[4] << 16) + (response[3] << 8) + response[2],
+      send_mode: response[5] >> 6,
       data_type: response[6]
     }
   end
@@ -94,7 +106,7 @@ class Rplidar
   end
 
   def ints_to_binary(array, format = 'C*')
-    [ array ].flatten.pack(format)
+    [array].flatten.pack(format)
   end
 
   def binary_to_ints(string, format = 'C*')
