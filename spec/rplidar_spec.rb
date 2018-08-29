@@ -10,7 +10,7 @@ end
 RESPONSE_DESCRIPTOR_SCAN = ascii("\xA5Z\x05\x00\x00@\x81")
 
 describe Rplidar do
-  let(:lidar) { Rplidar.new('/serial') }
+  let(:lidar) { described_class.new('/serial') }
   let(:port) { double('serial port') }
 
   before do
