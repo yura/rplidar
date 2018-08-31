@@ -1,5 +1,6 @@
 require 'rubyserial'
 
+# Ruby implementation of driver of the Rplidar A2.
 class Rplidar
   COMMAND_GET_HEALTH  = 0x52
   COMMAND_MOTOR_PWM   = 0xF0
@@ -15,10 +16,10 @@ class Rplidar
     @port_address = port_address
   end
 
-  def get_health
+  def current_state
     request(COMMAND_GET_HEALTH)
-    descriptor = parse_response_descriptor(port.read(RESPONSE_DESCRIPTOR_SIZE))
-    data_response = parse_data_response(port.read(descriptor[:data_response_length]))
+    descriptor = response_descriptor
+    data_response_length = descriptor[:data_response_length]
   end
 
   def start_motor
@@ -31,19 +32,18 @@ class Rplidar
 
   def scan(iterations = 10)
     request(COMMAND_SCAN)
-    response = port.read(RESPONSE_DESCRIPTOR_SIZE)
-    descriptor = parse_response_descriptor(response)
+    descriptor = response_descriptor
 
-    #i = 0
-    #File.open('output.bin', 'w') do |file|
-    #  loop do
-    #    break if i >= iterations
-    #    file.puts binary_to_ints(port.read(descriptor[:data_response_length])).inspect
-    #    i += 1
-    #  end
-    #end
-    #stop
-    #stop_motor
+    # i = 0
+    # File.open('output.bin', 'w') do |file|
+    #   loop do
+    #     break if i >= iterations
+    #     file.puts binary_to_ints(port.read(descriptor[:data_response_length])).inspect
+    #     i += 1
+    #   end
+    # end
+    # stop
+    # stop_motor
   end
 
   def stop
@@ -52,6 +52,10 @@ class Rplidar
 
   def reset
     request(COMMAND_RESET)
+  end
+
+  def response_descriptor
+    parse_response_descriptor(port.read(RESPONSE_DESCRIPTOR_SIZE))
   end
 
   def port

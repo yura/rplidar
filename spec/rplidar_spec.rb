@@ -17,80 +17,80 @@ describe Rplidar do
     allow(Serial).to receive(:new).with('/serial', 115_200, 8, :none, 1) { port }
   end
 
-  describe '#get_health' do
-    subject { lidar.get_health }
+  describe '#current_state' do
+    subject(:current_state) { lidar.current_state }
 
     before do
       allow(lidar).to receive(:request).with(0x52)
-      allow(port).to receive(:read) { ascii("\xA5Z\x03\x00\x00\x00\x06") }
+      allow(lidar).to receive(:response_descriptor).and_return({})
     end
 
     it 'sends GET_HEALTH request' do
-      subject
+      current_state
       expect(lidar).to have_received(:request).with(0x52)
     end
 
-    it 'reads 7 response bytes' do
-      subject
-      expect(port).to have_received(:read).with(7)
+    it 'calls response_descriptor' do
+      current_state
+      expect(lidar).to have_received(:response_descriptor)
     end
   end
 
   describe '#start_motor' do
-    subject { lidar.start_motor }
+    subject(:start_motor) { lidar.start_motor }
 
     before do
       allow(lidar).to receive(:request_with_payload).with(0xF0, 660)
     end
 
     it 'sends START_MOTOR command' do
-      subject
+      start_motor
       expect(lidar).to have_received(:request_with_payload).with(0xF0, 660)
     end
   end
 
   describe '#stop_motor' do
-    subject { lidar.stop_motor }
+    subject(:stop_motor) { lidar.stop_motor }
 
     before do
       allow(lidar).to receive(:request_with_payload)
-          .with(0xF0, 0).and_return(nil)
+        .with(0xF0, 0).and_return(nil)
     end
 
     it 'sends STOP_MOTOR command' do
-      subject
+      stop_motor
       expect(lidar).to have_received(:request_with_payload).with(0xF0, 0)
     end
   end
 
   describe '#scan' do
-    subject { lidar.scan }
+    subject(:scan) { lidar.scan }
 
     before do
       allow(lidar).to receive(:request).with(0x20)
-      allow(port).to receive(:read).with(7).and_return(RESPONSE_DESCRIPTOR_SCAN)
+      allow(lidar).to receive(:response_descriptor).and_return({})
     end
 
     it 'sends SCAN request' do
-      subject
+      scan
       expect(lidar).to have_received(:request).with(0x20)
     end
 
     it 'reads SCAN response descriptor' do
-      subject
-      expect(port).to have_received(:read).with(7)
+      scan
+      expect(lidar).to have_received(:response_descriptor)
     end
   end
 
   describe '#stop' do
-    subject { lidar.stop }
+    subject(:stop) { lidar.stop }
 
     before do
       allow(lidar).to receive(:request).with(0x25)
     end
 
     it 'sends STOP request' do
-      subject
+      stop
       expect(lidar).to have_received(:request).with(0x25)
     end
 
@@ -98,14 +98,14 @@ describe Rplidar do
   end
 
   describe '#reset' do
-    subject { lidar.reset }
+    subject(:reset) { lidar.reset }
 
     before do
       allow(lidar).to receive(:request).with(0x40)
     end
 
     it 'sends RESET request' do
-      subject
+      reset
       expect(lidar).to have_received(:request).with(0x40)
     end
 
@@ -113,7 +113,7 @@ describe Rplidar do
   end
 
   describe '#request' do
-    subject { lidar.request(0x20) }
+    subject(:request) { lidar.request(0x20) }
 
     before do
       allow(lidar).to receive(:port).and_return(port)
@@ -121,21 +121,43 @@ describe Rplidar do
     end
 
     it 'writes binary string to the serial port' do
-      subject
+      request
       expect(lidar).to have_received(:port)
       expect(port).to have_received(:write).with(ascii("\xA5 "))
     end
   end
 
+  describe '#response_descriptor' do
+    before do
+      allow(port).to receive(:read)
+        .with(7)
+        .and_return(RESPONSE_DESCRIPTOR_SCAN)
+      allow(lidar).to receive(:parse_response_descriptor)
+        .with(RESPONSE_DESCRIPTOR_SCAN)
+        .and_return({})
+    end
+
+    it 'reads 7 bytes from the port' do
+      lidar.response_descriptor
+      expect(port).to have_received(:read).with(7)
+    end
+
+    it 'calls parse_response_descriptor' do
+      lidar.response_descriptor
+      expect(lidar).to have_received(:parse_response_descriptor)
+        .with(RESPONSE_DESCRIPTOR_SCAN)
+    end
+  end
+
   describe '#request_with_payload' do
-    subject { lidar.request_with_payload(0xF0, 660) }
+    subject(:request_with_payload) { lidar.request_with_payload(0xF0, 660) }
 
     before do
       allow(port).to receive(:write).with(ascii("\xA5\xF0\x02\x94\x02\xC1"))
     end
 
     it 'writes binary string with payload to the serial port' do
-      subject
+      request_with_payload
       expect(port).to have_received(:write).with(ascii("\xA5\xF0\x02\x94\x02\xC1"))
     end
   end
@@ -151,14 +173,14 @@ describe Rplidar do
   end
 
   describe '#close' do
-    subject { lidar.close }
+    subject(:close) { lidar.close }
 
     before do
       allow(port).to receive(:close)
     end
 
     it 'does not close the port if it is not open' do
-      subject
+      close
       expect(port).not_to have_received(:close)
     end
 
@@ -166,16 +188,14 @@ describe Rplidar do
       # open create port first
       lidar.port
 
-      subject
+      close
       expect(port).to have_received(:close)
     end
   end
 
   describe '#port' do
-    subject { lidar.port }
-
     it 'opens serial port' do
-      subject
+      lidar.port
       expect(Serial).to have_received(:new).with('/serial', 115_200, 8, :none, 1)
     end
 
@@ -184,7 +204,7 @@ describe Rplidar do
       lidar.port
 
       # call it second time
-      subject
+      lidar.port
       expect(Serial).to have_received(:new).with(any_args).once
     end
   end
