@@ -9,7 +9,7 @@ require './lib/rplidar'
 
 # for Mac OS
 lidar = Rplidar.new('/dev/tty.SLAB_USBtoUART')
-lidar.get_health
+lidar.current_state
 
 lidar.start_motor
 lidar.scan
