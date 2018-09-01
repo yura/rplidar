@@ -2,15 +2,22 @@ require 'rubyserial'
 
 # Ruby implementation of driver of the Rplidar A2.
 class Rplidar
+  # Lidar states
+  STATE_GOOD = 0
+  STATE_WARNING = 1
+  STATE_ERROR = 2
+
+  # Commands
   COMMAND_GET_HEALTH  = 0x52
   COMMAND_MOTOR_PWM   = 0xF0
   COMMAND_SCAN        = 0x20
   COMMAND_STOP        = 0x25
   COMMAND_RESET       = 0x40
 
-  UART_BAUD_RATE = 115_200
-
+  # Default length of response descriptors
   RESPONSE_DESCRIPTOR_SIZE = 7
+
+  UART_BAUD_RATE = 115_200
 
   def initialize(port_address)
     @port_address = port_address
@@ -19,7 +26,12 @@ class Rplidar
   def current_state
     request(COMMAND_GET_HEALTH)
     descriptor = response_descriptor
-    data_response_length = descriptor[:data_response_length]
+    response = data_response(descriptor[:data_response_length])
+    case response[0]
+      when STATE_GOOD    then [:good, []]
+      when STATE_WARNING then [:warning, []]
+      when STATE_ERROR   then [:error, response[1..-1]]
+    end
   end
 
   def start_motor
@@ -54,10 +66,6 @@ class Rplidar
     request(COMMAND_RESET)
   end
 
-  def response_descriptor
-    parse_response_descriptor(port.read(RESPONSE_DESCRIPTOR_SIZE))
-  end
-
   def port
     @port ||= Serial.new(@port_address, UART_BAUD_RATE, 8, :none, 1)
   end
@@ -89,6 +97,14 @@ class Rplidar
     result
   end
 
+  def response_descriptor
+    parse_response_descriptor(port.read(RESPONSE_DESCRIPTOR_SIZE))
+  end
+
+  def data_response(length)
+    binary_to_ints(port.read(length))
+  end
+
   # Format of Response Descriptor:
   #
   # Start Flag 1   Start Flag 2    Data Response Length  Send Mode  Data Type
@@ -104,10 +120,6 @@ class Rplidar
       send_mode: response[5] >> 6,
       data_type: response[6]
     }
-  end
-
-  def parse_data_response(string)
-    binary_to_ints(string)
   end
 
   def ints_to_binary(array, format = 'C*')

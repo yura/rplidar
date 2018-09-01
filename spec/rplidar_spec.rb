@@ -9,6 +9,11 @@ end
 
 RESPONSE_DESCRIPTOR_SCAN = ascii("\xA5Z\x05\x00\x00@\x81")
 
+# Data Responses
+DR_HEALTH_GOOD    = [0, 0, 0]
+DR_HEALTH_WARNING = [1, 0, 0]
+DR_HEALTH_ERROR   = [2, 3, 5]
+
 describe Rplidar do
   let(:lidar) { described_class.new('/serial') }
   let(:port) { instance_double('serial port') }
@@ -22,7 +27,11 @@ describe Rplidar do
 
     before do
       allow(lidar).to receive(:request).with(0x52)
-      allow(lidar).to receive(:response_descriptor).and_return({})
+      allow(lidar).to receive(:response_descriptor)
+        .and_return({ data_response_length: 3 })
+      allow(lidar).to receive(:data_response)
+        .with(3)
+        .and_return([0, 0, 0])
     end
 
     it 'sends GET_HEALTH request' do
@@ -30,10 +39,35 @@ describe Rplidar do
       expect(lidar).to have_received(:request).with(0x52)
     end
 
-    it 'calls response_descriptor' do
+    it 'reads response_descriptor' do
       current_state
       expect(lidar).to have_received(:response_descriptor)
     end
+
+    it 'reads data_response' do
+      current_state
+      expect(lidar).to have_received(:data_response).with(3)
+    end
+
+    it 'returns :good if lidar is in Good (0) state' do
+      allow(lidar).to receive(:data_response).with(3)
+        .and_return(DR_HEALTH_GOOD)
+      is_expected.to eq([:good, []])
+    end
+
+    it 'returns :warning if lidar is in Warning (1) state' do
+      allow(lidar).to receive(:data_response).with(3)
+        .and_return(DR_HEALTH_WARNING)
+      is_expected.to eq([:warning, []])
+    end
+
+    it 'returns :error if lidar is in Error (2) state' do
+      allow(lidar).to receive(:data_response).with(3)
+        .and_return(DR_HEALTH_ERROR)
+      is_expected.to eq([:error, [3,5]])
+    end
+
+    it 'concatenates error code bytes'
   end
 
   describe '#start_motor' do
