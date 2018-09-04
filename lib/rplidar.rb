@@ -1,11 +1,11 @@
 require 'rubyserial'
 
-# Ruby implementation of driver of the Rplidar A2.
+# Ruby implementation of driver of the SLAMTEC RPLIDAR A2.
 class Rplidar
   # Lidar states
-  STATE_GOOD = 0
+  STATE_GOOD    = 0
   STATE_WARNING = 1
-  STATE_ERROR = 2
+  STATE_ERROR   = 2
 
   # Commands
   COMMAND_GET_HEALTH  = 0x52
@@ -28,34 +28,66 @@ class Rplidar
     descriptor = response_descriptor
     response = data_response(descriptor[:data_response_length])
     case response[0]
-      when STATE_GOOD    then [:good, []]
-      when STATE_WARNING then [:warning, []]
-      when STATE_ERROR   then [:error, response[1..-1]]
+    when STATE_GOOD    then [:good, []]
+    when STATE_WARNING then [:warning, []]
+    when STATE_ERROR   then [:error, response[1..-1]]
     end
   end
 
-  def start_motor
-    request_with_payload(COMMAND_MOTOR_PWM, 660)
+  def start_motor(pwm = 660)
+    request_with_payload(COMMAND_MOTOR_PWM, pwm)
   end
 
   def stop_motor
     request_with_payload(COMMAND_MOTOR_PWM, 0)
   end
 
-  def scan(iterations = 10)
+  def scan(filename = 'output.csv', iterations = 1)
     request(COMMAND_SCAN)
     descriptor = response_descriptor
 
-    # i = 0
-    # File.open('output.bin', 'w') do |file|
-    #   loop do
-    #     break if i >= iterations
-    #     file.puts binary_to_ints(port.read(descriptor[:data_response_length])).inspect
-    #     i += 1
-    #   end
-    # end
-    # stop
-    # stop_motor
+    # puts "response_descriptor: #{descriptor.inspect}"
+
+    iteration = -1
+    measurement = 0
+    File.open(filename, 'w') do |file|
+      # puts "#,start,quality,angle,distance,response"
+      file.puts "#,start,quality,angle,distance,response"
+      loop do
+        response = data_response(descriptor[:data_response_length])
+        start = response[0][0]
+        inversed_start = response[0][1]
+
+        if (start == 1 && inversed_start != 0) || (start == 0 && inversed_start != 1)
+          raise 'Inversed start flag bit of the data response if not inverse of the start bit'
+        end
+
+        if response[1][0] != 1
+          raise 'Check bit of the data response is not equal to 1'
+        end
+
+        if start == 1
+          iteration += 1
+          measurement = 0
+          break if iteration >= iterations
+        end
+
+        if iteration >= 0
+          quality = response[0] >> 2
+          angle = ((response[2] << 7) + (response[1] >> 1)) / 64.0
+          distance = ((response[4] << 8) + response[3]) / 4.0
+
+          # puts "#{iteration},#{measurement},#{start == 1},#{quality},#{angle},#{distance},#{response}"
+          file.puts "#{iteration},#{measurement},#{start == 1},#{quality},#{angle},#{distance},#{response}"
+
+          measurement += 1
+        end
+      end
+    end
+
+    stop
+
+    clear_buffer
   end
 
   def stop
@@ -77,7 +109,7 @@ class Rplidar
   def request(command)
     params = [0xA5, command]
     port.write(ints_to_binary(params))
-    sleep 0.002
+    sleep 0.5
   end
 
   def request_with_payload(command, payload)
@@ -102,7 +134,17 @@ class Rplidar
   end
 
   def data_response(length)
-    binary_to_ints(port.read(length))
+    response = []
+    while response.size < length
+      byte = port.getbyte
+      response << byte if byte
+    end
+    response
+  end
+
+  def clear_buffer
+    while port.getbyte
+    end
   end
 
   # Format of Response Descriptor:
@@ -116,7 +158,8 @@ class Rplidar
     # TODO: check response headers
 
     {
-      data_response_length: (response[4] << 16) + (response[3] << 8) + response[2],
+      data_response_length: (response[4] << 16) +
+        (response[3] << 8) + response[2],
       send_mode: response[5] >> 6,
       data_type: response[6]
     }
