@@ -7,7 +7,9 @@ def ascii(string)
   string.force_encoding('ASCII-8BIT')
 end
 
-RESPONSE_DESCRIPTOR_SCAN = ascii("\xA5Z\x05\x00\x00@\x81")
+# Raw response descriptors
+RAW_RD_GET_HEALTH = ascii("\xA5Z\x03\x00\x00\x00\x06")
+RAW_RD_SCAN       = ascii("\xA5Z\x05\x00\x00@\x81")
 
 # Data Responses
 DR_HEALTH_GOOD    = [0, 0, 0].freeze
@@ -28,7 +30,7 @@ describe Rplidar do
     before do
       allow(lidar).to receive(:request).with(0x52)
       allow(lidar).to receive(:response_descriptor)
-        .and_return({ data_response_length: 3 })
+        .and_return(data_response_length: 3)
       allow(lidar).to receive(:data_response)
         .with(3)
         .and_return([0, 0, 0])
@@ -50,21 +52,24 @@ describe Rplidar do
     end
 
     it 'returns :good if lidar is in Good (0) state' do
-      allow(lidar).to receive(:data_response).with(3)
+      allow(lidar).to receive(:data_response)
+        .with(3)
         .and_return(DR_HEALTH_GOOD)
-      is_expected.to eq([:good, []])
+      current_state.to eq([:good, []])
     end
 
     it 'returns :warning if lidar is in Warning (1) state' do
-      allow(lidar).to receive(:data_response).with(3)
+      allow(lidar).to receive(:data_response)
+        .with(3)
         .and_return(DR_HEALTH_WARNING)
-      is_expected.to eq([:warning, []])
+      current_state.to eq([:warning, []])
     end
 
     it 'returns :error if lidar is in Error (2) state' do
-      allow(lidar).to receive(:data_response).with(3)
+      allow(lidar).to receive(:data_response)
+        .with(3)
         .and_return(DR_HEALTH_ERROR)
-      is_expected.to eq([:error, [3,5]])
+      current_state.to eq([:error, [3, 5]])
     end
 
     it 'concatenates error code bytes'
@@ -103,8 +108,10 @@ describe Rplidar do
     before do
       allow(lidar).to receive(:request).with(0x20) # start
       allow(lidar).to receive(:request).with(0x25) # stop
-      allow(lidar).to receive(:response_descriptor).and_return({ data_response_length: 5 })
-      allow(lidar).to receive(:data_response).and_return([61, 73, 178, 108, 4], [62, 77, 178, 104, 4], [61, 73, 178, 108, 4])
+      allow(lidar).to receive(:response_descriptor)
+        .and_return(data_response_length: 5)
+      allow(lidar).to receive(:data_response)
+        .and_return([61, 73, 178, 108, 4], [62, 77, 178, 104, 4], [61, 73, 178, 108, 4])
       allow(lidar).to receive(:clear_buffer)
     end
 
@@ -132,6 +139,7 @@ describe Rplidar do
 
     before do
       allow(lidar).to receive(:request).with(0x25)
+      allow(lidar).to receive(:clear_buffer)
     end
 
     it 'sends STOP request' do
@@ -140,6 +148,11 @@ describe Rplidar do
     end
 
     it 'sleeps for at least 1 ms'
+
+    it 'clears port afterwards' do
+      stop
+      expect(lidar).to have_received(:clear_buffer)
+    end
   end
 
   describe '#reset' do
@@ -176,9 +189,9 @@ describe Rplidar do
     before do
       allow(port).to receive(:read)
         .with(7)
-        .and_return(RESPONSE_DESCRIPTOR_SCAN)
+        .and_return(RAW_RD_SCAN)
       allow(lidar).to receive(:parse_response_descriptor)
-        .with(RESPONSE_DESCRIPTOR_SCAN)
+        .with(RAW_RD_SCAN)
         .and_return({})
     end
 
@@ -190,7 +203,7 @@ describe Rplidar do
     it 'calls parse_response_descriptor' do
       lidar.response_descriptor
       expect(lidar).to have_received(:parse_response_descriptor)
-        .with(RESPONSE_DESCRIPTOR_SCAN)
+        .with(RAW_RD_SCAN)
     end
   end
 
@@ -214,6 +227,30 @@ describe Rplidar do
 
     it 'XORs few bytes' do
       expect(lidar.checksum("\xA5\xF0")).to eq(0xA5 ^ 0xF0)
+    end
+  end
+
+  describe '#scan_data_response' do
+    subject(:scan_data_response) { lidar.scan_data_response(5) }
+
+    it ''
+  end
+
+  describe '#data_response_has_correct_start_flags?' do
+    it 'raises an exception if the inversed start flag bit is not an inverse of the start flag bit' do
+      [[[1, 1]], [[0, 0]], [[1, -2]], [[0, -1]]].each do |wrong_response|
+        expect do
+          lidar.data_response_has_correct_start_flags?(wrong_response)
+        end.to raise_error('Inversed start flag bit of the data response if not inverse of the start bit')
+      end
+    end
+
+    it 'raises an exception if 3rd bit is not equal to 1' do
+      [[[1, 0], [0]], [[0, 1], [2]]].each do |wrong_response|
+        expect do
+          lidar.data_response_has_correct_start_flags?(wrong_response)
+        end.to raise_error('Check bit of the data response is not equal to 1')
+      end
     end
   end
 
@@ -255,15 +292,21 @@ describe Rplidar do
   end
 
   describe '#parse_response_descriptor' do
-    it 'returns hash with parsed values' do
-      expect(lidar.parse_response_descriptor(ascii("\xA5Z\x03\x00\x00\x00\x06"))).to eq(data_response_length: 3, send_mode: 0, data_type: 6)
-      expect(lidar.parse_response_descriptor(ascii("\xA5Z\x05\x00\x00@\x81"))).to eq(data_response_length: 5, send_mode: 1, data_type: 129)
+    it 'processes GET_HEALTH response descriptor correctly' do
+      expect(lidar.parse_response_descriptor(RAW_RD_GET_HEALTH)).to \
+        eq(data_response_length: 3, send_mode: 0, data_type: 6)
+    end
+
+    it 'processes scan response descriptor correctly' do
+      expect(lidar.parse_response_descriptor(RAW_RD_SCAN)).to \
+        eq(data_response_length: 5, send_mode: 1, data_type: 129)
     end
   end
 
   describe '#binary_to_ints' do
     it 'converts binary sequence to integer array' do
-      expect(lidar.binary_to_ints(ascii("\xA5Z\x03\x00\x00\x00\x06"))).to eq([165, 90, 3, 0, 0, 0, 6])
+      expect(lidar.binary_to_ints(RAW_RD_GET_HEALTH)).to \
+        eq([165, 90, 3, 0, 0, 0, 6])
     end
   end
 
@@ -278,28 +321,6 @@ describe Rplidar do
 
     it 'converts array of integers to the binary sequence' do
       expect(lidar.ints_to_binary([0xA5, 0x20])).to eq(ascii("\xA5 "))
-    end
-  end
-
-  describe '#data_response_has_correct_start_flags?' do
-    xit 'raises an exception if the inversed start flag bit is not an inverse of the start flag bit' do
-      [
-        [ [1, 1] ], [ [0, 0] ], [ [1, -2] ], [ [0, -1] ]
-      ].each do |wrong_response|
-        expect do
-          lidar.data_response_has_correct_start_flags?(wrong_response)
-        end.to raise_error('Inversed start flag bit of the data response if not inverse of the start bit')
-      end
-    end
-
-    xit 'raises an exception if 3rd bit is not equal to 1' do
-      [
-        [ [1, 0], [0] ], [ [0, 1], [2] ], [ [1, 0], [-1] ], [ [0, 1], [-2] ]
-      ].each do |wrong_response|
-        expect do
-          lidar.data_response_has_correct_start_flags?(wrong_response)
-        end.to raise_error('Check bit of the data response is not equal to 1')
-      end
     end
   end
 end

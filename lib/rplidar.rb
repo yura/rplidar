@@ -14,8 +14,9 @@ class Rplidar
   COMMAND_STOP        = 0x25
   COMMAND_RESET       = 0x40
 
-  # Default length of response descriptors
-  RESPONSE_DESCRIPTOR_SIZE = 7
+  # Default length of responses
+  RESPONSE_DESCRIPTOR_LENGTH = 7
+  SCAN_DATA_RESPONSE_LENGTH  = 5
 
   UART_BAUD_RATE = 115_200
 
@@ -44,54 +45,30 @@ class Rplidar
 
   def scan(filename = 'output.csv', iterations = 1)
     request(COMMAND_SCAN)
+    # FIXME: obsolete
     descriptor = response_descriptor
 
-    # puts "response_descriptor: #{descriptor.inspect}"
-
     iteration = -1
-    measurement = 0
     File.open(filename, 'w') do |file|
-      # puts "#,start,quality,angle,distance,response"
-      file.puts "#,start,quality,angle,distance,response"
+      file.puts 'start,quality,angle,distance'
       loop do
-        response = data_response(descriptor[:data_response_length])
-        start = response[0][0]
-        inversed_start = response[0][1]
-
-        if (start == 1 && inversed_start != 0) || (start == 0 && inversed_start != 1)
-          raise 'Inversed start flag bit of the data response if not inverse of the start bit'
-        end
-
-        if response[1][0] != 1
-          raise 'Check bit of the data response is not equal to 1'
-        end
+        start, quality, angle, distance = scan_data_response
 
         if start == 1
           iteration += 1
-          measurement = 0
           break if iteration >= iterations
         end
 
-        if iteration >= 0
-          quality = response[0] >> 2
-          angle = ((response[2] << 7) + (response[1] >> 1)) / 64.0
-          distance = ((response[4] << 8) + response[3]) / 4.0
-
-          # puts "#{iteration},#{measurement},#{start == 1},#{quality},#{angle},#{distance},#{response}"
-          file.puts "#{iteration},#{measurement},#{start == 1},#{quality},#{angle},#{distance},#{response}"
-
-          measurement += 1
-        end
+        file.puts "#{start},#{quality},#{angle},#{distance}" if iteration >= 0
       end
     end
 
     stop
-
-    clear_buffer
   end
 
   def stop
     request(COMMAND_STOP)
+    clear_buffer
   end
 
   def reset
@@ -124,13 +101,11 @@ class Rplidar
   end
 
   def checksum(string)
-    result = 0
-    binary_to_ints(string).each { |c| result ^= c }
-    result
+    binary_to_ints(string).reduce(:^)
   end
 
   def response_descriptor
-    parse_response_descriptor(port.read(RESPONSE_DESCRIPTOR_SIZE))
+    parse_response_descriptor(port.read(RESPONSE_DESCRIPTOR_LENGTH))
   end
 
   def data_response(length)
@@ -140,6 +115,36 @@ class Rplidar
       response << byte if byte
     end
     response
+  end
+
+  def scan_data_response
+    response = data_response(SCAN_DATA_RESPONSE_LENGTH)
+    data_response_has_correct_start_flags?(response)
+
+    [response[0][0], quality(response), angle(response), distance(response)]
+  end
+
+  def quality(response)
+    response[0] >> 2
+  end
+
+  def angle(response)
+    ((response[2] << 7) + (response[1] >> 1)) / 64.0
+  end
+
+  def distance(response)
+    ((response[4] << 8) + response[3]) / 4.0
+  end
+
+  def data_response_has_correct_start_flags?(response)
+    start = response[0][0]
+    inversed_start = response[0][1]
+
+    if (start == 1 && !inversed_start.zero?) || (start.zero? && inversed_start != 1)
+      raise 'Inversed start flag bit of the data response if not inverse of the start bit'
+    end
+
+    raise 'Check bit of the data response is not equal to 1' if response[1][0] != 1
   end
 
   def clear_buffer
