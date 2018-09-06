@@ -55,21 +55,21 @@ describe Rplidar do
       allow(lidar).to receive(:data_response)
         .with(3)
         .and_return(DR_HEALTH_GOOD)
-      current_state.to eq([:good, []])
+      expect(current_state).to eq([:good, []])
     end
 
     it 'returns :warning if lidar is in Warning (1) state' do
       allow(lidar).to receive(:data_response)
         .with(3)
         .and_return(DR_HEALTH_WARNING)
-      current_state.to eq([:warning, []])
+      expect(current_state).to eq([:warning, []])
     end
 
     it 'returns :error if lidar is in Error (2) state' do
       allow(lidar).to receive(:data_response)
         .with(3)
         .and_return(DR_HEALTH_ERROR)
-      current_state.to eq([:error, [3, 5]])
+      expect(current_state).to eq([:error, [3, 5]])
     end
 
     it 'concatenates error code bytes'
