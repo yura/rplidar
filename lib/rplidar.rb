@@ -43,27 +43,38 @@ class Rplidar
     request_with_payload(COMMAND_MOTOR_PWM, 0)
   end
 
-  def scan(filename = 'output.csv', iterations = 1)
+  def scan_to_file(filename = 'output.csv', iterations = 1)
+    responses = scan(iterations)
+
+    File.open(filename, 'w') do |file|
+      file.puts 'start,quality,angle,distance'
+      responses.each do |r|
+        file.puts "#{r[:start]},#{r[:quality]},#{r[:angle]},#{r[:distance]}"
+      end
+    end
+  end
+
+  def scan(iterations = 1)
     request(COMMAND_SCAN)
     # FIXME: obsolete
     descriptor = response_descriptor
 
+    responses = []
     iteration = -1
-    File.open(filename, 'w') do |file|
-      file.puts 'start,quality,angle,distance'
-      loop do
-        start, quality, angle, distance = scan_data_response
+    loop do
+      response = scan_data_response
 
-        if start == 1
-          iteration += 1
-          break if iteration >= iterations
-        end
+      responses << response if responses.empty? && response[:start] == 1
 
-        file.puts "#{start},#{quality},#{angle},#{distance}" if iteration >= 0
+      if response[:start] == 1
+        iteration += 1
+        break if iteration >= iterations
       end
     end
 
     stop
+
+    responses
   end
 
   def stop
@@ -121,7 +132,12 @@ class Rplidar
     response = data_response(SCAN_DATA_RESPONSE_LENGTH)
     data_response_has_correct_start_flags?(response)
 
-    [response[0][0], quality(response), angle(response), distance(response)]
+    {
+      start: response[0][0],
+      quality: quality(response),
+      angle: angle(response),
+      distance: distance(response)
+    }
   end
 
   def quality(response)

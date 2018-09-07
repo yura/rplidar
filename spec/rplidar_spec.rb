@@ -178,9 +178,13 @@ describe Rplidar do
       allow(port).to receive(:write).with(ascii("\xA5 "))
     end
 
-    it 'writes binary string to the serial port' do
+    it 'gets serial port' do
       request
       expect(lidar).to have_received(:port)
+    end
+
+    it 'writes binary string to the serial port' do
+      request
       expect(port).to have_received(:write).with(ascii("\xA5 "))
     end
   end
@@ -237,7 +241,7 @@ describe Rplidar do
   end
 
   describe '#data_response_has_correct_start_flags?' do
-    it 'raises an exception if the inversed start flag bit is not an inverse of the start flag bit' do
+    it 'raises inversed start flag bit is not inverse of the start flag bit' do
       [[[1, 1]], [[0, 0]], [[1, -2]], [[0, -1]]].each do |wrong_response|
         expect do
           lidar.data_response_has_correct_start_flags?(wrong_response)
