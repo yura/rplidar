@@ -14,6 +14,11 @@ class Rplidar
   COMMAND_STOP        = 0x25
   COMMAND_RESET       = 0x40
 
+  COMMANDS_WITH_RESPONSE = [
+    COMMAND_GET_HEALTH,
+    COMMAND_SCAN
+  ].freeze
+
   # Default length of responses
   RESPONSE_DESCRIPTOR_LENGTH = 7
   SCAN_DATA_RESPONSE_LENGTH  = 5
@@ -25,8 +30,7 @@ class Rplidar
   end
 
   def current_state
-    request(COMMAND_GET_HEALTH)
-    descriptor = response_descriptor
+    descriptor = command(COMMAND_GET_HEALTH)
     response = data_response(descriptor[:data_response_length])
     case response[0]
     when STATE_GOOD    then [:good, []]
@@ -55,10 +59,14 @@ class Rplidar
   end
 
   def scan(iterations = 1)
-    request(COMMAND_SCAN)
-    # FIXME: obsolete
-    descriptor = response_descriptor
+    command(COMMAND_SCAN)
+    responses = collect_scan_data_responses(iterations)
+    stop
 
+    responses
+  end
+
+  def collect_scan_data_responses(iterations)
     responses = []
     iteration = -1
     loop do
@@ -71,19 +79,15 @@ class Rplidar
         break if iteration >= iterations
       end
     end
-
-    stop
-
-    responses
   end
 
   def stop
-    request(COMMAND_STOP)
-    clear_buffer
+    command(COMMAND_STOP)
+    clear_port
   end
 
   def reset
-    request(COMMAND_RESET)
+    command(COMMAND_RESET)
   end
 
   def port
@@ -92,6 +96,11 @@ class Rplidar
 
   def close
     @port.close if @port
+  end
+
+  def command(command)
+    request(command)
+    response_descriptor if COMMANDS_WITH_RESPONSE.include?(command)
   end
 
   def request(command)
@@ -115,8 +124,22 @@ class Rplidar
     binary_to_ints(string).reduce(:^)
   end
 
+  # Format of Response Descriptor:
+  #
+  # Start Flag 1   Start Flag 2    Data Response Length  Send Mode  Data Type
+  #
+  # 1 byte (0xA5)  1 bytes (0x5A)  30 bits               2 bits     1 byte
   def response_descriptor
-    parse_response_descriptor(port.read(RESPONSE_DESCRIPTOR_LENGTH))
+    response = data_response(RESPONSE_DESCRIPTOR_LENGTH)
+
+    # TODO: check response headers
+
+    {
+      data_response_length: (response[4] << 16) +
+        (response[3] << 8) + response[2],
+      send_mode: response[5] >> 6,
+      data_type: response[6]
+    }
   end
 
   def data_response(length)
@@ -130,7 +153,7 @@ class Rplidar
 
   def scan_data_response
     response = data_response(SCAN_DATA_RESPONSE_LENGTH)
-    data_response_has_correct_start_flags?(response)
+    check_data_response_header(response)
 
     {
       start: response[0][0],
@@ -138,6 +161,24 @@ class Rplidar
       angle: angle(response),
       distance: distance(response)
     }
+  end
+
+  def check_data_response_header(response)
+    raise 'Inversed start bit of the data response is not inverse of the start bit' unless correct_start_bit?(response)
+    raise 'Check bit of the data response is not equal to 1' unless correct_check_bit?(response)
+  end
+
+  def correct_start_bit?(response)
+    # start bit
+    start = response[0][0]
+    # inversed start bit
+    inversed = response[0][1]
+
+    (start == 1 && inversed.zero?) || (start.zero? && inversed == 1)
+  end
+
+  def correct_check_bit?(response)
+    response[1][0] == 1
   end
 
   def quality(response)
@@ -152,38 +193,9 @@ class Rplidar
     ((response[4] << 8) + response[3]) / 4.0
   end
 
-  def data_response_has_correct_start_flags?(response)
-    start = response[0][0]
-    inversed_start = response[0][1]
-
-    if (start == 1 && !inversed_start.zero?) || (start.zero? && inversed_start != 1)
-      raise 'Inversed start flag bit of the data response if not inverse of the start bit'
-    end
-
-    raise 'Check bit of the data response is not equal to 1' if response[1][0] != 1
-  end
-
-  def clear_buffer
+  def clear_port
     while port.getbyte
     end
-  end
-
-  # Format of Response Descriptor:
-  #
-  # Start Flag 1   Start Flag 2    Data Response Length  Send Mode  Data Type
-  #
-  # 1 byte (0xA5)  1 bytes (0x5A)  30 bits               2 bits     1 byte
-  def parse_response_descriptor(string)
-    response = binary_to_ints(string)
-
-    # TODO: check response headers
-
-    {
-      data_response_length: (response[4] << 16) +
-        (response[3] << 8) + response[2],
-      send_mode: response[5] >> 6,
-      data_type: response[6]
-    }
   end
 
   def ints_to_binary(array, format = 'C*')

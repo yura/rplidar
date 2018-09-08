@@ -11,6 +11,9 @@ end
 RAW_RD_GET_HEALTH = ascii("\xA5Z\x03\x00\x00\x00\x06")
 RAW_RD_SCAN       = ascii("\xA5Z\x05\x00\x00@\x81")
 
+RD_GET_HEALTH     = [165, 90, 3, 0, 0, 0, 6]
+RD_SCAN           = [165, 90, 5, 0, 0, 64, 129]
+
 # Data Responses
 DR_HEALTH_GOOD    = [0, 0, 0].freeze
 DR_HEALTH_WARNING = [1, 0, 0].freeze
@@ -21,29 +24,26 @@ describe Rplidar do
   let(:port) { instance_double('serial port') }
 
   before do
-    allow(Serial).to receive(:new).with('/serial', 115_200, 8, :none, 1) { port }
+    allow(Serial).to receive(:new)
+      .with('/serial', 115_200, 8, :none, 1)
+      .and_return(port)
   end
 
   describe '#current_state' do
     subject(:current_state) { lidar.current_state }
 
     before do
-      allow(lidar).to receive(:request).with(0x52)
-      allow(lidar).to receive(:response_descriptor)
+      allow(lidar).to receive(:command)
+        .with(0x52)
         .and_return(data_response_length: 3)
       allow(lidar).to receive(:data_response)
         .with(3)
         .and_return([0, 0, 0])
     end
 
-    it 'sends GET_HEALTH request' do
+    it 'sends GET_HEALTH command' do
       current_state
-      expect(lidar).to have_received(:request).with(0x52)
-    end
-
-    it 'reads response_descriptor' do
-      current_state
-      expect(lidar).to have_received(:response_descriptor)
+      expect(lidar).to have_received(:command).with(0x52)
     end
 
     it 'reads data_response' do
@@ -106,31 +106,37 @@ describe Rplidar do
     subject(:scan) { lidar.scan }
 
     before do
-      allow(lidar).to receive(:request).with(0x20) # start
-      allow(lidar).to receive(:request).with(0x25) # stop
-      allow(lidar).to receive(:response_descriptor)
-        .and_return(data_response_length: 5)
-      allow(lidar).to receive(:data_response)
-        .and_return([61, 73, 178, 108, 4], [62, 77, 178, 104, 4], [61, 73, 178, 108, 4])
-      allow(lidar).to receive(:clear_buffer)
+      allow(lidar).to receive(:command)
+        .with(0x20).and_return(data_response_length: 5)
+      allow(lidar).to receive(:collect_scan_data_responses)
+        .with(1).and_return([1, 2, 3, 4, 5])
+      allow(lidar).to receive(:stop)
     end
 
     it 'sends SCAN request' do
       scan
-      expect(lidar).to have_received(:request).with(0x20)
+      expect(lidar).to have_received(:command).with(0x20)
     end
 
-    it 'reads SCAN response descriptor' do
+    it 'collects scan data responses' do
       scan
-      expect(lidar).to have_received(:response_descriptor)
+      expect(lidar).to have_received(:collect_scan_data_responses).with(1)
     end
 
-    it 'reads SCAN data response' do
-    end
-
-    it 'clears buffer' do
+    it 'stops scanning' do
       scan
-      expect(lidar).to have_received(:clear_buffer)
+      expect(lidar).to have_received(:stop)
+    end
+  end
+
+  describe '#collect_scan_data_responses' do
+    before do
+      allow(lidar).to receive(:scan_data_response)
+        .and_return(
+          [61, 73, 178, 108, 4],
+          [62, 77, 178, 104, 4],
+          [61, 73, 178, 108, 4]
+        )
     end
   end
 
@@ -139,7 +145,7 @@ describe Rplidar do
 
     before do
       allow(lidar).to receive(:request).with(0x25)
-      allow(lidar).to receive(:clear_buffer)
+      allow(lidar).to receive(:clear_port)
     end
 
     it 'sends STOP request' do
@@ -151,7 +157,7 @@ describe Rplidar do
 
     it 'clears port afterwards' do
       stop
-      expect(lidar).to have_received(:clear_buffer)
+      expect(lidar).to have_received(:clear_port)
     end
   end
 
@@ -191,23 +197,28 @@ describe Rplidar do
 
   describe '#response_descriptor' do
     before do
-      allow(port).to receive(:read)
+      allow(lidar).to receive(:data_response)
         .with(7)
-        .and_return(RAW_RD_SCAN)
-      allow(lidar).to receive(:parse_response_descriptor)
-        .with(RAW_RD_SCAN)
-        .and_return({})
+        .and_return(RD_GET_HEALTH)
     end
 
     it 'reads 7 bytes from the port' do
       lidar.response_descriptor
-      expect(port).to have_received(:read).with(7)
+      expect(lidar).to have_received(:data_response).with(7)
     end
 
-    it 'calls parse_response_descriptor' do
-      lidar.response_descriptor
-      expect(lidar).to have_received(:parse_response_descriptor)
-        .with(RAW_RD_SCAN)
+    it 'processes GET_HEALTH response descriptor correctly' do
+      allow(lidar).to receive(:data_response)
+        .with(7).and_return(RD_GET_HEALTH)
+      expect(lidar.response_descriptor).to \
+        eq(data_response_length: 3, send_mode: 0, data_type: 6)
+    end
+
+    it 'processes scan response descriptor correctly' do
+      allow(lidar).to receive(:data_response)
+        .with(7).and_return(RD_SCAN)
+      expect(lidar.response_descriptor).to \
+        eq(data_response_length: 5, send_mode: 1, data_type: 129)
     end
   end
 
@@ -220,7 +231,8 @@ describe Rplidar do
 
     it 'writes binary string with payload to the serial port' do
       request_with_payload
-      expect(port).to have_received(:write).with(ascii("\xA5\xF0\x02\x94\x02\xC1"))
+      expect(port).to have_received(:write)
+        .with(ascii("\xA5\xF0\x02\x94\x02\xC1"))
     end
   end
 
@@ -240,19 +252,19 @@ describe Rplidar do
     it ''
   end
 
-  describe '#data_response_has_correct_start_flags?' do
+  describe '#check_data_response_header' do
     it 'raises inversed start flag bit is not inverse of the start flag bit' do
       [[[1, 1]], [[0, 0]], [[1, -2]], [[0, -1]]].each do |wrong_response|
         expect do
-          lidar.data_response_has_correct_start_flags?(wrong_response)
-        end.to raise_error('Inversed start flag bit of the data response if not inverse of the start bit')
+          lidar.check_data_response_header(wrong_response)
+        end.to raise_error('Inversed start bit of the data response is not inverse of the start bit')
       end
     end
 
     it 'raises an exception if 3rd bit is not equal to 1' do
       [[[1, 0], [0]], [[0, 1], [2]]].each do |wrong_response|
         expect do
-          lidar.data_response_has_correct_start_flags?(wrong_response)
+          lidar.check_data_response_header(wrong_response)
         end.to raise_error('Check bit of the data response is not equal to 1')
       end
     end
@@ -282,7 +294,8 @@ describe Rplidar do
   describe '#port' do
     it 'opens serial port' do
       lidar.port
-      expect(Serial).to have_received(:new).with('/serial', 115_200, 8, :none, 1)
+      expect(Serial).to have_received(:new)
+        .with('/serial', 115_200, 8, :none, 1)
     end
 
     it 'does not open port if it is already open' do
@@ -295,15 +308,44 @@ describe Rplidar do
     end
   end
 
-  describe '#parse_response_descriptor' do
-    it 'processes GET_HEALTH response descriptor correctly' do
-      expect(lidar.parse_response_descriptor(RAW_RD_GET_HEALTH)).to \
-        eq(data_response_length: 3, send_mode: 0, data_type: 6)
+  describe '#correct_start_bit?' do
+    it 'raises inversed start flag bit is not inverse of the start flag bit' do
+      [[[1, 1]], [[0, 0]], [[1, -2]], [[0, -1]]].each do |response|
+        expect(lidar.correct_start_bit?(response)).to be_falsy
+      end
+    end
+  end
+
+  describe '#correct_check_bit?' do
+    it 'returns true if first bit of the second byte is equal to 1' do
+      [[0, 1], [0, 3], [0, 5], [0, 255]].each do |response|
+        expect(lidar.correct_check_bit?(response)).to be_truthy
+      end
     end
 
-    it 'processes scan response descriptor correctly' do
-      expect(lidar.parse_response_descriptor(RAW_RD_SCAN)).to \
-        eq(data_response_length: 5, send_mode: 1, data_type: 129)
+    it 'returns false if first bit of the second byte is not equal to 1' do
+      [[0, 0], [0, 2], [0, 254]].each do |response|
+        expect(lidar.correct_check_bit?(response)).to be_falsy
+      end
+    end
+  end
+
+  describe '#clear_port' do
+    subject(:clear_port) { lidar.clear_port }
+
+    before do
+      allow(lidar).to receive(:port).and_return(port)
+      allow(port).to receive(:getbyte).and_return(1, 2, 3, 4, 5, nil)
+    end
+
+    it 'gets port' do
+      clear_port
+      expect(lidar).to have_received(:port).exactly(6).times
+    end
+
+    it 'reads all bytes from the port' do
+      clear_port
+      expect(port).to have_received(:getbyte).exactly(6).times
     end
   end
 
