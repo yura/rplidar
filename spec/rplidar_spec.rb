@@ -11,13 +11,15 @@ end
 RAW_RD_GET_HEALTH = ascii("\xA5Z\x03\x00\x00\x00\x06")
 RAW_RD_SCAN       = ascii("\xA5Z\x05\x00\x00@\x81")
 
-RD_GET_HEALTH     = [165, 90, 3, 0, 0, 0, 6]
-RD_SCAN           = [165, 90, 5, 0, 0, 64, 129]
+RD_GET_HEALTH     = [165, 90, 3, 0, 0, 0, 6].freeze
+RD_SCAN           = [165, 90, 5, 0, 0, 64, 129].freeze
 
 # Data Responses
 DR_HEALTH_GOOD    = [0, 0, 0].freeze
 DR_HEALTH_WARNING = [1, 0, 0].freeze
 DR_HEALTH_ERROR   = [2, 3, 5].freeze
+
+DR_SCAN           = [62, 63, 3, 117, 4].freeze
 
 describe Rplidar do
   let(:lidar) { described_class.new('/serial') }
@@ -246,10 +248,56 @@ describe Rplidar do
     end
   end
 
-  describe '#scan_data_response' do
-    subject(:scan_data_response) { lidar.scan_data_response(5) }
+  describe '#data_response' do
+    subject(:data_response) { lidar.data_response(5) }
 
-    it ''
+    before do
+      allow(port).to receive(:getbyte).and_return(1, 55, 88, 111, 222, 111)
+    end
+
+    it 'reads bytes from the port' do
+      data_response
+      expect(port).to have_received(:getbyte).exactly(5).times
+    end
+
+    it 'returns all read bytes' do
+      expect(data_response).to eq([1, 55, 88, 111, 222])
+    end
+
+    it 'raises timeout exception if read takes more than 2 seconds' do
+      allow(port).to receive(:getbyte).and_return(1, 2, 3, nil)
+      expect do
+        data_response
+      end.to raise_error('Timeout while getting byte from the port')
+    end
+  end
+
+  describe '#scan_data_response' do
+    subject(:scan_data_response) { lidar.scan_data_response }
+
+    before do
+      allow(lidar).to receive(:data_response).with(5).and_return(DR_SCAN)
+      allow(lidar).to receive(:check_data_response_header).with(DR_SCAN)
+      allow(lidar).to receive(:angle).with(DR_SCAN).and_return(111)
+      allow(lidar).to receive(:distance).with(DR_SCAN).and_return(222)
+      allow(lidar).to receive(:quality).with(DR_SCAN).and_return(333)
+    end
+
+    it 'reads data_response' do
+      scan_data_response
+      expect(lidar).to have_received(:data_response).with(5)
+    end
+
+    it 'checks headers' do
+      scan_data_response
+      expect(lidar).to have_received(:check_data_response_header).with(DR_SCAN)
+    end
+
+    it 'returns hash with processed values' do
+      expect(scan_data_response).to eq(
+        start: 0, angle: 111, distance: 222, quality: 333
+      )
+    end
   end
 
   describe '#check_data_response_header' do
@@ -323,10 +371,28 @@ describe Rplidar do
       end
     end
 
-    it 'returns false if first bit of the second byte is not equal to 1' do
+    it 'returns false if 1st bit of the 2nd byte is not equal to 1' do
       [[0, 0], [0, 2], [0, 254]].each do |response|
         expect(lidar.correct_check_bit?(response)).to be_falsy
       end
+    end
+  end
+
+  describe '#angle' do
+    it 'processes angle from the 2nd and 3rd bytes' do
+      expect(lidar.angle([62, 155, 2, 112, 4])).to eq(5.203125)
+    end
+  end
+
+  describe '#distance' do
+    it 'processes angle from the 4th and 5th bytes' do
+      expect(lidar.distance([62, 155, 2, 112, 4])).to eq(284)
+    end
+  end
+
+  describe '#quality' do
+    it 'processes quantity from the 1st bit' do
+      expect(lidar.quality([62, 155, 2, 112, 4])).to eq(15)
     end
   end
 

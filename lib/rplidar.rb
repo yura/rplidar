@@ -143,10 +143,12 @@ class Rplidar
   end
 
   def data_response(length)
+    start = Time.now
     response = []
     while response.size < length
       byte = port.getbyte
       response << byte if byte
+      raise 'Timeout while getting byte from the port' if Time.now - start >= 2
     end
     response
   end
