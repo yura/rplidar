@@ -72,13 +72,14 @@ class Rplidar
     loop do
       response = scan_data_response
 
-      responses << response if responses.empty? && response[:start] == 1
-
       if response[:start] == 1
         iteration += 1
         break if iteration >= iterations
       end
+
+      responses << response if iteration >= 0
     end
+    responses
   end
 
   def stop
