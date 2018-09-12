@@ -71,8 +71,8 @@ class Rplidar
     iteration = -1
     while iteration < iterations
       response = scan_data_response
-      iteration += 1 if response[:start] == 1
-      responses << response if iteration >= 0 && iteration < iterations
+      iteration += 1 if response[:start]
+      responses << response if iteration.between?(0, iterations - 1)
     end
     responses
   end
@@ -154,7 +154,7 @@ class Rplidar
     check_data_response_header(response)
 
     {
-      start: response[0][0],
+      start: response[0][0] == 1,
       quality: quality(response),
       angle: angle(response),
       distance: distance(response)

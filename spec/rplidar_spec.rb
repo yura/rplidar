@@ -137,9 +137,9 @@ describe Rplidar do
     before do
       allow(lidar).to receive(:scan_data_response)
         .and_return(
-          { start: 1, angle: 110, distance: 220, quality: 10 },
-          { start: 0, angle: 111, distance: 230, quality: 11 },
-          start: 1, angle: 112, distance: 240, quality: 12
+          { start: true, angle: 110, distance: 220, quality: 10 },
+          { start: false, angle: 111, distance: 230, quality: 11 },
+          start: true, angle: 112, distance: 240, quality: 12
         )
     end
 
@@ -150,8 +150,8 @@ describe Rplidar do
 
     it 'returns collected iterations' do
       expect(collect_scans).to eq([
-        { start: 1, angle: 110, distance: 220, quality: 10 },
-        { start: 0, angle: 111, distance: 230, quality: 11 }
+        { start: true, angle: 110, distance: 220, quality: 10 },
+        { start: false, angle: 111, distance: 230, quality: 11 }
       ])
     end
   end
@@ -309,7 +309,7 @@ describe Rplidar do
 
     it 'returns hash with processed values' do
       expect(scan_data_response).to eq(
-        start: 0, angle: 111, distance: 222, quality: 333
+        start: false, angle: 111, distance: 222, quality: 333
       )
     end
   end
