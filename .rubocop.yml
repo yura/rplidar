@@ -4,3 +4,6 @@
 #    - '**/*.rake'
 #    - 'spec/**/*.rb'
 require: rubocop-rspec
+
+Layout/IndentArray:
+  EnforcedStyle: consistent

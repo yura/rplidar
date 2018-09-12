@@ -69,15 +69,10 @@ class Rplidar
   def collect_scan_data_responses(iterations)
     responses = []
     iteration = -1
-    loop do
+    while iteration < iterations
       response = scan_data_response
-
-      if response[:start] == 1
-        iteration += 1
-        break if iteration >= iterations
-      end
-
-      responses << response if iteration >= 0
+      iteration += 1 if response[:start] == 1
+      responses << response if iteration >= 0 && iteration < iterations
     end
     responses
   end

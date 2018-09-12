@@ -132,13 +132,27 @@ describe Rplidar do
   end
 
   describe '#collect_scan_data_responses' do
+    subject(:collect_scans) { lidar.collect_scan_data_responses(1) }
+
     before do
       allow(lidar).to receive(:scan_data_response)
         .and_return(
-          [61, 73, 178, 108, 4],
-          [62, 77, 178, 104, 4],
-          [61, 73, 178, 108, 4]
+          { start: 1, angle: 110, distance: 220, quality: 10 },
+          { start: 0, angle: 111, distance: 230, quality: 11 },
+          start: 1, angle: 112, distance: 240, quality: 12
         )
+    end
+
+    it 'calls :scan_data_response' do
+      collect_scans
+      expect(lidar).to have_received(:scan_data_response).exactly(3).times
+    end
+
+    it 'returns collected iterations' do
+      expect(collect_scans).to eq([
+        { start: 1, angle: 110, distance: 220, quality: 10 },
+        { start: 0, angle: 111, distance: 230, quality: 11 }
+      ])
     end
   end
 
