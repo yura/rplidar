@@ -28,7 +28,7 @@ Run `bundle exec irb`
 require './lib/rplidar'
 
 # for Mac OS
-lidar = Rplidar.new('/dev/tty.SLAB_USBtoUART')
+lidar = Rplidar::Driver.new('/dev/tty.SLAB_USBtoUART')
 lidar.current_state
 
 lidar.start_motor
