@@ -1,6 +1,6 @@
 source 'https://rubygems.org'
 
-gem 'rubyserial', github: 'hybridgroup/rubyserial'
+gem 'rubyserial'
 
 group :development, :test do
   gem 'codecov', require: false
