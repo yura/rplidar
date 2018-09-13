@@ -1,7 +1,3 @@
-require 'spec_helper'
-require 'rplidar'
-require 'rubyserial'
-
 # do not convert string to unicode
 def ascii(string)
   string.force_encoding('ASCII-8BIT')
@@ -21,7 +17,7 @@ DR_HEALTH_ERROR   = [2, 3, 5].freeze
 
 DR_SCAN           = [62, 63, 3, 117, 4].freeze
 
-describe Rplidar do
+RSpec.describe Rplidar::Driver do
   let(:lidar) { described_class.new('/serial') }
   let(:port) { instance_double('serial port') }
 
@@ -317,17 +313,16 @@ describe Rplidar do
   describe '#check_data_response_header' do
     it 'raises inversed start flag bit is not inverse of the start flag bit' do
       [[[1, 1]], [[0, 0]], [[1, -2]], [[0, -1]]].each do |wrong_response|
-        expect do
-          lidar.check_data_response_header(wrong_response)
-        end.to raise_error('Inversed start bit of the data response is not inverse of the start bit')
+        expect { lidar.check_data_response_header(wrong_response) }.to \
+          raise_error('Inversed start bit of the data response ' \
+            'is not inverse of the start bit')
       end
     end
 
     it 'raises an exception if 3rd bit is not equal to 1' do
       [[[1, 0], [0]], [[0, 1], [2]]].each do |wrong_response|
-        expect do
-          lidar.check_data_response_header(wrong_response)
-        end.to raise_error('Check bit of the data response is not equal to 1')
+        expect { lidar.check_data_response_header(wrong_response) }.to \
+          raise_error('Check bit of the data response is not equal to 1')
       end
     end
   end

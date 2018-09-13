@@ -1,9 +1,6 @@
 source 'https://rubygems.org'
 
-gem 'rubyserial'
+git_source(:github) { |repo_name| "https://github.com/#{repo_name}" }
 
-group :development, :test do
-  gem 'codecov', require: false
-  gem 'rspec'
-  gem 'rubocop-rspec'
-end
+# Specify your gem's dependencies in rplidar.gemspec
+gemspec

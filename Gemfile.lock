@@ -1,3 +1,9 @@
+PATH
+  remote: .
+  specs:
+    rplidar (0.1.0)
+      rubyserial (~> 0.6)
+
 GEM
   remote: https://rubygems.org/
   specs:
@@ -16,6 +22,7 @@ GEM
       ast (~> 2.4.0)
     powerpack (0.1.2)
     rainbow (3.0.0)
+    rake (10.5.0)
     rspec (3.7.0)
       rspec-core (~> 3.7.0)
       rspec-expectations (~> 3.7.0)
@@ -54,10 +61,12 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  bundler (~> 1.16)
   codecov
-  rspec
+  rake (~> 10.0)
+  rplidar!
+  rspec (~> 3.0)
   rubocop-rspec
-  rubyserial
 
 BUNDLED WITH
    1.16.4
