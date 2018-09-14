@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    rplidar (0.1.0)
+    rplidar (0.1.2)
       rubyserial (~> 0.6)
 
 GEM
