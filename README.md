@@ -25,7 +25,7 @@ Or install it yourself as:
 Run `bundle exec irb`
 
 ```ruby
-require './lib/rplidar'
+require 'rplidar'
 
 # for Mac OS
 lidar = Rplidar::Driver.new('/dev/tty.SLAB_USBtoUART')
