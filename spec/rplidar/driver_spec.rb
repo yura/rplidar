@@ -10,11 +10,6 @@ RAW_RD_SCAN       = ascii("\xA5Z\x05\x00\x00@\x81")
 RD_GET_HEALTH     = [165, 90, 3, 0, 0, 0, 6].freeze
 RD_SCAN           = [165, 90, 5, 0, 0, 64, 129].freeze
 
-# Data Responses
-DR_HEALTH_GOOD    = [0, 0, 0].freeze
-DR_HEALTH_WARNING = [1, 0, 0].freeze
-DR_HEALTH_ERROR   = [2, 3, 5].freeze
-
 DR_SCAN           = [62, 63, 3, 117, 4].freeze
 
 RSpec.describe Rplidar::Driver do
@@ -52,25 +47,23 @@ RSpec.describe Rplidar::Driver do
     it 'returns :good if lidar is in Good (0) state' do
       allow(lidar).to receive(:read_response)
         .with(3)
-        .and_return(DR_HEALTH_GOOD)
+        .and_return([0, 0, 0])
       expect(current_state).to eq([:good, []])
     end
 
     it 'returns :warning if lidar is in Warning (1) state' do
       allow(lidar).to receive(:read_response)
         .with(3)
-        .and_return(DR_HEALTH_WARNING)
+        .and_return([1, 0, 0])
       expect(current_state).to eq([:warning, []])
     end
 
     it 'returns :error if lidar is in Error (2) state' do
       allow(lidar).to receive(:read_response)
         .with(3)
-        .and_return(DR_HEALTH_ERROR)
+        .and_return([2, 3, 5])
       expect(current_state).to eq([:error, [3, 5]])
     end
-
-    it 'concatenates error code bytes'
   end
 
   describe '#start_motor' do

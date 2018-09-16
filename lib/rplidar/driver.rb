@@ -3,11 +3,6 @@ require 'rubyserial'
 module Rplidar
   # Ruby implementation of driver of the SLAMTEC RPLIDAR A2.
   class Driver
-    # Lidar states
-    STATE_GOOD    = 0
-    STATE_WARNING = 1
-    STATE_ERROR   = 2
-
     # Commands
     COMMAND_GET_HEALTH  = 0x52
     COMMAND_MOTOR_PWM   = 0xF0
@@ -32,12 +27,8 @@ module Rplidar
 
     def current_state
       descriptor = command(COMMAND_GET_HEALTH)
-      response = read_response(descriptor[:data_response_length])
-      case response[0]
-      when STATE_GOOD    then [:good, []]
-      when STATE_WARNING then [:warning, []]
-      when STATE_ERROR   then [:error, response[1..-1]]
-      end
+      raw_response = read_response(descriptor[:data_response_length])
+      Rplidar::CurrentStateDataResponse.new(raw_response).response
     end
 
     def start_motor(pwm = 660)
