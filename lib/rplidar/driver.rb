@@ -121,38 +121,25 @@ module Rplidar
       binary_to_ints(string).reduce(:^)
     end
 
-    # Format of Response Descriptor:
-    #
-    # Start Flag 1   Start Flag 2    Data Response Length  Send Mode  Data Type
-    #
-    # 1 byte (0xA5)  1 bytes (0x5A)  30 bits               2 bits     1 byte
     def response_descriptor
-      response = data_response(RESPONSE_DESCRIPTOR_LENGTH)
-
-      # TODO: check response headers
-
-      {
-        data_response_length: (response[4] << 16) +
-          (response[3] << 8) + response[2],
-        send_mode: response[5] >> 6,
-        data_type: response[6]
-      }
-    end
-
-    def data_response(length)
-      start = Time.now
-      response = []
-      while response.size < length
-        byte = port.getbyte
-        response << byte if byte
-        raise 'Timeout while getting byte from the port' if Time.now - start > 2
-      end
-      response
+      raw_response = data_response(RESPONSE_DESCRIPTOR_LENGTH)
+      Rplidar::ResponseDescriptor.new(raw_response).response
     end
 
     def scan_data_response
       raw_response = data_response(SCAN_DATA_RESPONSE_LENGTH)
       Rplidar::ScanDataResponse.new(raw_response).response
+    end
+
+    def data_response(length)
+      t = Time.now
+      response = []
+      while response.size < length
+        byte = port.getbyte
+        response << byte if byte
+        raise 'Timeout while reading a byte from the port' if Time.now - t > 2
+      end
+      response
     end
 
     def clear_port

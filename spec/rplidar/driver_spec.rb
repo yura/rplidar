@@ -278,7 +278,7 @@ RSpec.describe Rplidar::Driver do
       allow(port).to receive(:getbyte).and_return(1, 2, 3, nil)
       expect do
         data_response
-      end.to raise_error('Timeout while getting byte from the port')
+      end.to raise_error('Timeout while reading a byte from the port')
     end
   end
 
