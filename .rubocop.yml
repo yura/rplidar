@@ -1,8 +1,10 @@
-#Metrics/BlockLength:
-#  Exclude:
-#    - 'Rakefile'
-#    - '**/*.rake'
-#    - 'spec/**/*.rb'
+Metrics/BlockLength:
+  Exclude:
+    - 'Rakefile'
+    - '**/*.rake'
+    - 'spec/**/*.rb'
+    - '**/*.gemspec'
+
 require: rubocop-rspec
 
 Layout/IndentArray:

@@ -287,10 +287,6 @@ RSpec.describe Rplidar::Driver do
 
     before do
       allow(lidar).to receive(:data_response).with(5).and_return(DR_SCAN)
-      allow(lidar).to receive(:check_data_response_header).with(DR_SCAN)
-      allow(lidar).to receive(:angle).with(DR_SCAN).and_return(111)
-      allow(lidar).to receive(:distance).with(DR_SCAN).and_return(222)
-      allow(lidar).to receive(:quality).with(DR_SCAN).and_return(333)
     end
 
     it 'reads data_response' do
@@ -298,32 +294,10 @@ RSpec.describe Rplidar::Driver do
       expect(lidar).to have_received(:data_response).with(5)
     end
 
-    it 'checks headers' do
-      scan_data_response
-      expect(lidar).to have_received(:check_data_response_header).with(DR_SCAN)
-    end
-
     it 'returns hash with processed values' do
       expect(scan_data_response).to eq(
-        start: false, angle: 111, distance: 222, quality: 333
+        start: false, angle: 6.484375, distance: 285.25, quality: 15
       )
-    end
-  end
-
-  describe '#check_data_response_header' do
-    it 'raises inversed start flag bit is not inverse of the start flag bit' do
-      [[[1, 1]], [[0, 0]], [[1, -2]], [[0, -1]]].each do |wrong_response|
-        expect { lidar.check_data_response_header(wrong_response) }.to \
-          raise_error('Inversed start bit of the data response ' \
-            'is not inverse of the start bit')
-      end
-    end
-
-    it 'raises an exception if 3rd bit is not equal to 1' do
-      [[[1, 0], [0]], [[0, 1], [2]]].each do |wrong_response|
-        expect { lidar.check_data_response_header(wrong_response) }.to \
-          raise_error('Check bit of the data response is not equal to 1')
-      end
     end
   end
 
@@ -362,46 +336,6 @@ RSpec.describe Rplidar::Driver do
       # call it second time
       lidar.port
       expect(Serial).to have_received(:new).with(any_args).once
-    end
-  end
-
-  describe '#correct_start_bit?' do
-    it 'raises inversed start flag bit is not inverse of the start flag bit' do
-      [[[1, 1]], [[0, 0]], [[1, -2]], [[0, -1]]].each do |response|
-        expect(lidar.correct_start_bit?(response)).to be_falsy
-      end
-    end
-  end
-
-  describe '#correct_check_bit?' do
-    it 'returns true if first bit of the second byte is equal to 1' do
-      [[0, 1], [0, 3], [0, 5], [0, 255]].each do |response|
-        expect(lidar.correct_check_bit?(response)).to be_truthy
-      end
-    end
-
-    it 'returns false if 1st bit of the 2nd byte is not equal to 1' do
-      [[0, 0], [0, 2], [0, 254]].each do |response|
-        expect(lidar.correct_check_bit?(response)).to be_falsy
-      end
-    end
-  end
-
-  describe '#angle' do
-    it 'processes angle from the 2nd and 3rd bytes' do
-      expect(lidar.angle([62, 155, 2, 112, 4])).to eq(5.203125)
-    end
-  end
-
-  describe '#distance' do
-    it 'processes angle from the 4th and 5th bytes' do
-      expect(lidar.distance([62, 155, 2, 112, 4])).to eq(284)
-    end
-  end
-
-  describe '#quality' do
-    it 'processes quantity from the 1st bit' do
-      expect(lidar.quality([62, 155, 2, 112, 4])).to eq(15)
     end
   end
 

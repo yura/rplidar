@@ -151,52 +151,8 @@ module Rplidar
     end
 
     def scan_data_response
-      response = data_response(SCAN_DATA_RESPONSE_LENGTH)
-      check_data_response_header(response)
-
-      {
-        start: response[0][0] == 1,
-        quality: quality(response),
-        angle: angle(response),
-        distance: distance(response)
-      }
-    end
-
-    def check_data_response_header(response)
-      unless correct_start_bit?(response)
-        raise 'Inversed start bit of the data response ' \
-          'is not inverse of the start bit'
-      end
-
-      unless correct_check_bit?(response)
-        raise 'Check bit of the data response is not equal ' \
-          'to 1'
-      end
-    end
-
-    def correct_start_bit?(response)
-      # start bit
-      start = response[0][0]
-      # inversed start bit
-      inversed = response[0][1]
-
-      (start == 1 && inversed.zero?) || (start.zero? && inversed == 1)
-    end
-
-    def correct_check_bit?(response)
-      response[1][0] == 1
-    end
-
-    def quality(response)
-      response[0] >> 2
-    end
-
-    def angle(response)
-      ((response[2] << 7) + (response[1] >> 1)) / 64.0
-    end
-
-    def distance(response)
-      ((response[4] << 8) + response[3]) / 4.0
+      raw_response = data_response(SCAN_DATA_RESPONSE_LENGTH)
+      Rplidar::ScanDataResponse.new(raw_response).response
     end
 
     def clear_port
