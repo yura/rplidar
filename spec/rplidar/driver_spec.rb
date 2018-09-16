@@ -34,7 +34,7 @@ RSpec.describe Rplidar::Driver do
       allow(lidar).to receive(:command)
         .with(0x52)
         .and_return(data_response_length: 3)
-      allow(lidar).to receive(:data_response)
+      allow(lidar).to receive(:read_response)
         .with(3)
         .and_return([0, 0, 0])
     end
@@ -46,25 +46,25 @@ RSpec.describe Rplidar::Driver do
 
     it 'reads data_response' do
       current_state
-      expect(lidar).to have_received(:data_response).with(3)
+      expect(lidar).to have_received(:read_response).with(3)
     end
 
     it 'returns :good if lidar is in Good (0) state' do
-      allow(lidar).to receive(:data_response)
+      allow(lidar).to receive(:read_response)
         .with(3)
         .and_return(DR_HEALTH_GOOD)
       expect(current_state).to eq([:good, []])
     end
 
     it 'returns :warning if lidar is in Warning (1) state' do
-      allow(lidar).to receive(:data_response)
+      allow(lidar).to receive(:read_response)
         .with(3)
         .and_return(DR_HEALTH_WARNING)
       expect(current_state).to eq([:warning, []])
     end
 
     it 'returns :error if lidar is in Error (2) state' do
-      allow(lidar).to receive(:data_response)
+      allow(lidar).to receive(:read_response)
         .with(3)
         .and_return(DR_HEALTH_ERROR)
       expect(current_state).to eq([:error, [3, 5]])
@@ -209,25 +209,25 @@ RSpec.describe Rplidar::Driver do
 
   describe '#response_descriptor' do
     before do
-      allow(lidar).to receive(:data_response)
+      allow(lidar).to receive(:read_response)
         .with(7)
         .and_return(RD_GET_HEALTH)
     end
 
     it 'reads 7 bytes from the port' do
       lidar.response_descriptor
-      expect(lidar).to have_received(:data_response).with(7)
+      expect(lidar).to have_received(:read_response).with(7)
     end
 
     it 'processes GET_HEALTH response descriptor correctly' do
-      allow(lidar).to receive(:data_response)
+      allow(lidar).to receive(:read_response)
         .with(7).and_return(RD_GET_HEALTH)
       expect(lidar.response_descriptor).to \
         eq(data_response_length: 3, send_mode: 0, data_type: 6)
     end
 
     it 'processes scan response descriptor correctly' do
-      allow(lidar).to receive(:data_response)
+      allow(lidar).to receive(:read_response)
         .with(7).and_return(RD_SCAN)
       expect(lidar.response_descriptor).to \
         eq(data_response_length: 5, send_mode: 1, data_type: 129)
@@ -258,26 +258,26 @@ RSpec.describe Rplidar::Driver do
     end
   end
 
-  describe '#data_response' do
-    subject(:data_response) { lidar.data_response(5) }
+  describe '#read_response' do
+    subject(:read_response) { lidar.read_response(5) }
 
     before do
       allow(port).to receive(:getbyte).and_return(1, 55, 88, 111, 222, 111)
     end
 
     it 'reads bytes from the port' do
-      data_response
+      read_response
       expect(port).to have_received(:getbyte).exactly(5).times
     end
 
     it 'returns all read bytes' do
-      expect(data_response).to eq([1, 55, 88, 111, 222])
+      expect(read_response).to eq([1, 55, 88, 111, 222])
     end
 
     it 'raises timeout exception if read takes more than 2 seconds' do
       allow(port).to receive(:getbyte).and_return(1, 2, 3, nil)
       expect do
-        data_response
+        read_response
       end.to raise_error('Timeout while reading a byte from the port')
     end
   end
@@ -286,12 +286,12 @@ RSpec.describe Rplidar::Driver do
     subject(:scan_data_response) { lidar.scan_data_response }
 
     before do
-      allow(lidar).to receive(:data_response).with(5).and_return(DR_SCAN)
+      allow(lidar).to receive(:read_response).with(5).and_return(DR_SCAN)
     end
 
-    it 'reads data_response' do
+    it 'reads response' do
       scan_data_response
-      expect(lidar).to have_received(:data_response).with(5)
+      expect(lidar).to have_received(:read_response).with(5)
     end
 
     it 'returns hash with processed values' do

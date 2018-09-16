@@ -32,7 +32,7 @@ module Rplidar
 
     def current_state
       descriptor = command(COMMAND_GET_HEALTH)
-      response = data_response(descriptor[:data_response_length])
+      response = read_response(descriptor[:data_response_length])
       case response[0]
       when STATE_GOOD    then [:good, []]
       when STATE_WARNING then [:warning, []]
@@ -122,16 +122,16 @@ module Rplidar
     end
 
     def response_descriptor
-      raw_response = data_response(RESPONSE_DESCRIPTOR_LENGTH)
+      raw_response = read_response(RESPONSE_DESCRIPTOR_LENGTH)
       Rplidar::ResponseDescriptor.new(raw_response).response
     end
 
     def scan_data_response
-      raw_response = data_response(SCAN_DATA_RESPONSE_LENGTH)
+      raw_response = read_response(SCAN_DATA_RESPONSE_LENGTH)
       Rplidar::ScanDataResponse.new(raw_response).response
     end
 
-    def data_response(length)
+    def read_response(length)
       t = Time.now
       response = []
       while response.size < length
