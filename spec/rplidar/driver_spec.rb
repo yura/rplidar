@@ -48,21 +48,21 @@ RSpec.describe Rplidar::Driver do
       allow(lidar).to receive(:read_response)
         .with(3)
         .and_return([0, 0, 0])
-      expect(current_state).to eq([:good, []])
+      expect(current_state).to eq(state: :good, error_code: 0)
     end
 
     it 'returns :warning if lidar is in Warning (1) state' do
       allow(lidar).to receive(:read_response)
         .with(3)
         .and_return([1, 0, 0])
-      expect(current_state).to eq([:warning, []])
+      expect(current_state).to eq(state: :warning, error_code: 0)
     end
 
     it 'returns :error if lidar is in Error (2) state' do
       allow(lidar).to receive(:read_response)
         .with(3)
         .and_return([2, 3, 5])
-      expect(current_state).to eq([:error, [3, 5]])
+      expect(current_state).to eq(state: :error, error_code: 1283)
     end
   end
 

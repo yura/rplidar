@@ -11,19 +11,17 @@ RSpec.describe Rplidar::CurrentStateDataResponse do
 
     it 'returns :good if lidar is in Good (0) state' do
       allow(data_response).to receive(:raw_response).and_return(DR_HEALTH_GOOD)
-      expect(response).to eq([:good, []])
+      expect(response).to eq(state: :good, error_code: 0)
     end
 
     it 'returns :warning if lidar is in Warning (1) state' do
       allow(data_response).to receive(:raw_response).and_return(DR_HEALTH_WARN)
-      expect(response).to eq([:warning, []])
+      expect(response).to eq(state: :warning, error_code: 0)
     end
 
     it 'returns :error if lidar is in Error (2) state' do
       allow(data_response).to receive(:raw_response).and_return(DR_HEALTH_ERR)
-      expect(response).to eq([:error, [3, 5]])
+      expect(response).to eq(state: :error, error_code: 1283)
     end
-
-    it 'concatenates error code bytes'
   end
 end
