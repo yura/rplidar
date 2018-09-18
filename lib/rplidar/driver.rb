@@ -5,7 +5,7 @@ module Rplidar
   class Driver
     # Commands
     COMMAND_GET_HEALTH  = 0x52
-    COMMAND_GET_INFO  =   0x50
+    COMMAND_GET_INFO    = 0x50
     COMMAND_MOTOR_PWM   = 0xF0
     COMMAND_SCAN        = 0x20
     COMMAND_STOP        = 0x25

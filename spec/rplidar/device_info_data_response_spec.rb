@@ -1,11 +1,11 @@
 DR_GET_INFO = [
   1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
-]
+].freeze
 
 DR_GET_INFO_REAL = [
   40, 24, 1, 4, 168, 226, 154, 240, 197, 226,
   157, 210, 182, 227, 157, 245, 43, 49, 49, 22
-]
+].freeze
 
 RSpec.describe Rplidar::DeviceInfoDataResponse do
   let(:response) { described_class.new(DR_GET_INFO) }

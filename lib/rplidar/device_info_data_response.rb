@@ -24,7 +24,7 @@ module Rplidar
       raw_response[3]
     end
 
-    # 128bit unique serial number. When converting to text in hex, 
+    # 128bit unique serial number. When converting to text in hex,
     # the Least Significant Byte prints first.
     def serial_number
       raw_response[4..-1].pack('c*').unpack('H*').first.upcase
