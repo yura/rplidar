@@ -1,4 +1,6 @@
 module Rplidar
+  # RPLIDAR will send out its device information:
+  # model, firmware version, hardware version, serial number.
   class DeviceInfoDataResponse < Response
     # RPLIDAR model ID.
     def model
