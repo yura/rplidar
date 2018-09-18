@@ -3,6 +3,9 @@ module Rplidar
   DATA_TYPE_CURRENT_STATE = 0x6
   DATA_TYPE_SCAN          = 0x81
 
+  SEND_MODE_SINGLE_REQUEST_SINGLE_RESPONSE   = 0x0
+  SEND_MODE_SINGLE_REQUEST_MULTIPLE_RESPONSE = 0x1
+
   # Incapsulates Response Descriptor processing. Format of Response Descriptor:
   #
   # Start Flag 1   Start Flag 2    Data Response Length  Send Mode  Data Type
@@ -46,7 +49,10 @@ module Rplidar
     end
 
     def correct_send_mode?
-      [0x0, 0x1].include?(send_mode)
+      [
+        SEND_MODE_SINGLE_REQUEST_SINGLE_RESPONSE,
+        SEND_MODE_SINGLE_REQUEST_MULTIPLE_RESPONSE
+      ].include?(send_mode)
     end
 
     def correct_data_type?
