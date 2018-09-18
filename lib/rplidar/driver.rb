@@ -5,6 +5,7 @@ module Rplidar
   class Driver
     # Commands
     COMMAND_GET_HEALTH  = 0x52
+    COMMAND_GET_INFO  =   0x50
     COMMAND_MOTOR_PWM   = 0xF0
     COMMAND_SCAN        = 0x20
     COMMAND_STOP        = 0x25
@@ -12,11 +13,13 @@ module Rplidar
 
     COMMANDS_WITH_RESPONSE = [
       COMMAND_GET_HEALTH,
+      COMMAND_GET_INFO,
       COMMAND_SCAN
     ].freeze
 
     # Default length of responses
     RESPONSE_DESCRIPTOR_LENGTH = 7
+    GET_INFO_RESPONSE_LENGTH   = 20
     SCAN_DATA_RESPONSE_LENGTH  = 5
 
     UART_BAUD_RATE = 115_200
@@ -29,6 +32,12 @@ module Rplidar
       descriptor = command(COMMAND_GET_HEALTH)
       raw_response = read_response(descriptor[:data_response_length])
       Rplidar::CurrentStateDataResponse.new(raw_response).response
+    end
+
+    def device_info
+      descriptor = command(COMMAND_GET_INFO)
+      raw_response = read_response(descriptor[:data_response_length])
+      Rplidar::DeviceInfoDataResponse.new(raw_response).response
     end
 
     def start_motor(pwm = 660)

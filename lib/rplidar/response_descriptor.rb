@@ -1,4 +1,6 @@
 module Rplidar
+  DATA_TYPE_DEVICE_INFO = 0x4
+
   # Incapsulates Response Descriptor processing. Format of Response Descriptor:
   #
   # Start Flag 1   Start Flag 2    Data Response Length  Send Mode  Data Type
@@ -46,7 +48,7 @@ module Rplidar
     end
 
     def correct_data_type?
-      [0x6, 0x81].include?(data_type)
+      [0x6, 0x81, DATA_TYPE_DEVICE_INFO].include?(data_type)
     end
 
     def data_response_length
