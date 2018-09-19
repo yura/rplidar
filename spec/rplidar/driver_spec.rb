@@ -67,7 +67,9 @@ RSpec.describe Rplidar::Driver do
     subject(:device_info) { lidar.device_info }
 
     before do
-      allow(lidar).to receive(:command).with(0x50).and_return(data_response_length: 20)
+      allow(lidar).to receive(:command)
+        .with(0x50)
+        .and_return(data_response_length: 20)
       allow(lidar).to receive(:read_response).and_return([
         40, 24, 1, 4, 168, 226, 154, 240, 197, 226,
         157, 210, 182, 227, 157, 245, 43, 49, 49, 22

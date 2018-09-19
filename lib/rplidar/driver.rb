@@ -1,8 +1,13 @@
+require 'rplidar/csv'
+require 'rplidar/util'
 require 'rubyserial'
 
 module Rplidar
   # Ruby implementation of driver of the SLAMTEC RPLIDAR A2.
   class Driver
+    include Rplidar::CSV
+    include Rplidar::Util
+
     # Commands
     COMMAND_GET_HEALTH  = 0x52
     COMMAND_GET_INFO    = 0x50
@@ -48,17 +53,6 @@ module Rplidar
       request_with_payload(COMMAND_MOTOR_PWM, 0)
     end
 
-    def dump_scans(filename = 'output.csv', iterations = 1)
-      responses = scan(iterations)
-
-      file = File.open(filename, 'w')
-      file.puts 'start,quality,angle,distance'
-      responses.each do |r|
-        file.puts "#{r[:start]},#{r[:quality]},#{r[:angle]},#{r[:distance]}"
-      end
-      file.close
-    end
-
     def scan(iterations = 1)
       command(COMMAND_SCAN)
       responses = collect_scan_data_responses(iterations)
@@ -87,14 +81,6 @@ module Rplidar
       command(COMMAND_RESET)
     end
 
-    def port
-      @port ||= Serial.new(@port_address, UART_BAUD_RATE, 8, :none, 1)
-    end
-
-    def close
-      @port.close if @port
-    end
-
     def command(command)
       request(command)
       response_descriptor if COMMANDS_WITH_RESPONSE.include?(command)
@@ -115,10 +101,6 @@ module Rplidar
       string += ints_to_binary(checksum(string))
 
       port.write(string)
-    end
-
-    def checksum(string)
-      binary_to_ints(string).reduce(:^)
     end
 
     def response_descriptor
@@ -147,12 +129,12 @@ module Rplidar
       end
     end
 
-    def ints_to_binary(array, format = 'C*')
-      [array].flatten.pack(format)
+    def close
+      @port.close if @port
     end
 
-    def binary_to_ints(string, format = 'C*')
-      string.unpack(format)
+    def port
+      @port ||= Serial.new(@port_address, UART_BAUD_RATE, 8, :none, 1)
     end
   end
 end
