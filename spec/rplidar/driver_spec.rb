@@ -22,6 +22,76 @@ RSpec.describe Rplidar::Driver do
       .and_return(port)
   end
 
+  describe '#dump_scans' do
+    subject(:dump_scans) { lidar.dump_scans('dump_30.csv', 30) }
+
+    let(:file) { instance_double('file') }
+
+    before do
+      allow(lidar).to receive(:scan).with(30).and_return([
+        { start: true, quality: 2, angle: 3, distance: 4 }
+      ])
+      allow(File).to receive(:open).with('dump_30.csv', 'w').and_return(file)
+      allow(file).to receive(:puts).with('start,quality,angle,distance')
+      allow(file).to receive(:puts).with('true,2,3,4')
+      allow(file).to receive(:close)
+    end
+
+    it 'reads measurements' do
+      dump_scans
+      expect(lidar).to have_received(:scan).with(30)
+    end
+
+    it 'opens a file for writing' do
+      dump_scans
+      expect(File).to have_received(:open).with('dump_30.csv', 'w')
+    end
+
+    it 'writes a CSV header to the file' do
+      dump_scans
+      expect(file).to have_received(:puts).with('start,quality,angle,distance')
+    end
+
+    it 'writes scans' do
+      dump_scans
+      expect(file).to have_received(:puts).with('true,2,3,4')
+    end
+
+    it 'closes the file' do
+      dump_scans
+      expect(file).to have_received(:close)
+    end
+  end
+
+  describe '#device_info' do
+    subject(:device_info) { lidar.device_info }
+
+    before do
+      allow(lidar).to receive(:command).with(0x50).and_return(data_response_length: 20)
+      allow(lidar).to receive(:read_response).and_return([
+        40, 24, 1, 4, 168, 226, 154, 240, 197, 226,
+        157, 210, 182, 227, 157, 245, 43, 49, 49, 22
+      ])
+    end
+
+    it 'calls GET_INFO command' do
+      device_info
+      expect(lidar).to have_received(:command).with(0x50)
+    end
+
+    it 'reads device info data response' do
+      device_info
+      expect(lidar).to have_received(:read_response).with(20)
+    end
+
+    it 'returns device info' do
+      expect(device_info).to eq(
+        model: 40, firmware: '1.24',
+        hardware: 4, serial_number: 'A8E29AF0C5E29DD2B6E39DF52B313116'
+      )
+    end
+  end
+
   describe '#current_state' do
     subject(:current_state) { lidar.current_state }
 

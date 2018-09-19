@@ -48,15 +48,15 @@ module Rplidar
       request_with_payload(COMMAND_MOTOR_PWM, 0)
     end
 
-    def scan_to_file(filename = 'output.csv', iterations = 1)
+    def dump_scans(filename = 'output.csv', iterations = 1)
       responses = scan(iterations)
 
-      File.open(filename, 'w') do |file|
-        file.puts 'start,quality,angle,distance'
-        responses.each do |r|
-          file.puts "#{r[:start]},#{r[:quality]},#{r[:angle]},#{r[:distance]}"
-        end
+      file = File.open(filename, 'w')
+      file.puts 'start,quality,angle,distance'
+      responses.each do |r|
+        file.puts "#{r[:start]},#{r[:quality]},#{r[:angle]},#{r[:distance]}"
       end
+      file.close
     end
 
     def scan(iterations = 1)

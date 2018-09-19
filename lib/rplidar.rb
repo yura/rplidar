@@ -11,5 +11,4 @@ module Rplidar
   STATE_GOOD    = 0
   STATE_WARNING = 1
   STATE_ERROR   = 2
-
 end
