@@ -2,7 +2,7 @@
 
 [![Build Status](https://semaphoreci.com/api/v1/yurykotlyarov/rplidar/branches/master/shields_badge.svg)](https://semaphoreci.com/yurykotlyarov/rplidar) [![codecov](https://codecov.io/gh/yura/rplidar/branch/master/graph/badge.svg)](https://codecov.io/gh/yura/rplidar) [![Maintainability](https://api.codeclimate.com/v1/badges/3e73393095982858c97b/maintainability)](https://codeclimate.com/github/yura/rplidar/maintainability) [![security](https://hakiri.io/github/yura/rplidar/master.svg)](https://hakiri.io/github/yura/rplidar/master) [![Gem Version](https://badge.fury.io/rb/rplidar.svg)](https://badge.fury.io/rb/rplidar)
 
-Ruby implementation of SLAMTEK RPLIDAR A2M8 lidar.
+Ruby implementation of SLAMTEK RPLIDAR lidar driver. Tested on A2M8 model.
 
 ## Installation
 
