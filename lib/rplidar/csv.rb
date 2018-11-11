@@ -10,6 +10,8 @@ module Rplidar
         file.puts "#{r[:start]},#{r[:quality]},#{r[:angle]},#{r[:distance]}"
       end
       file.close
+
+      responses
     end
   end
 end
